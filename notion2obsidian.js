@@ -499,6 +499,18 @@ async function extractZipToTemp(zipPath) {
     });
 
     console.log(chalk.green('✓ Extraction complete\n'));
+
+    // Check if zip extracted to a single top-level directory
+    const entries = await readdir(tempDir);
+    if (entries.length === 1) {
+      const potentialSubdir = join(tempDir, entries[0]);
+      const subdirStat = await stat(potentialSubdir);
+      if (subdirStat.isDirectory()) {
+        console.log(chalk.gray(`Using subdirectory: ${entries[0]}\n`));
+        return potentialSubdir;
+      }
+    }
+
     return tempDir;
   } catch (err) {
     // Clean up on error
