@@ -5,7 +5,6 @@ import { stat, readdir, rename, copyFile, mkdir, rm, writeFile, lstat, realpath,
 import { join, dirname, basename, extname, relative, sep } from "node:path";
 import { unzipSync } from "fflate";
 import chalk from "chalk";
-import cliProgress from "cli-progress";
 
 // ============================================================================
 // Runtime Check
@@ -40,7 +39,6 @@ function parseArgs() {
   const config = {
     targetDir: '.',
     dryRun: false,
-    skipBackup: false,
     verbose: false,
     dirExplicitlyProvided: false
   };
@@ -50,8 +48,6 @@ function parseArgs() {
 
     if (arg === '--dry-run' || arg === '-d') {
       config.dryRun = true;
-    } else if (arg === '--skip-backup') {
-      config.skipBackup = true;
     } else if (arg === '--verbose' || arg === '-v') {
       config.verbose = true;
     } else if (arg === '--help' || arg === '-h') {
@@ -76,7 +72,6 @@ ${chalk.yellow('Usage:')}
 ${chalk.yellow('Options:')}
   -d, --dry-run       Preview changes without modifying files
                       (extracts 10% sample or 10MB max for zip files)
-  --skip-backup       Skip creating backup files (faster but risky)
   -v, --verbose       Show detailed processing information
   -h, --help          Show this help message
 
@@ -136,6 +131,7 @@ function cleanDirName(dirname) {
   }
   return sanitizeFilename(dirname);
 }
+
 
 // ============================================================================
 // File Map Builder
@@ -261,13 +257,7 @@ function getTagsFromPath(filePath, baseDir) {
   return [...new Set(tags)];
 }
 
-async function getFileStats(filePath) {
-  const stats = await stat(filePath);
-  return {
-    created: stats.birthtime.toISOString().split('T')[0],
-    modified: stats.mtime.toISOString().split('T')[0]
-  };
-}
+// File stats function removed - dates not meaningful for Notion exports
 
 // ============================================================================
 // Frontmatter Generation
@@ -282,8 +272,6 @@ function generateFrontmatter(metadata, relativePath) {
   const lines = ['---'];
 
   if (metadata.title) lines.push(`title: "${escapeYamlString(metadata.title)}"`);
-  if (metadata.created) lines.push(`created: ${metadata.created}`);
-  if (metadata.modified) lines.push(`modified: ${metadata.modified}`);
   if (metadata.tags && metadata.tags.length > 0) {
     lines.push(`tags: [${metadata.tags.join(', ')}]`);
   }
@@ -315,10 +303,53 @@ function generateFrontmatter(metadata, relativePath) {
 }
 
 // ============================================================================
+// Asset Path Conversion
+// ============================================================================
+
+function cleanAssetPaths(content, dirNameMap) {
+  // Update all asset references (images, files) to use cleaned directory names
+  // Pattern matches: ![alt](path) and [text](path) for local files
+  const assetPattern = /(!?\[[^\]]*\]\()([^)]+)(\))/g;
+
+  return content.replace(assetPattern, (match, prefix, path, suffix) => {
+    // Skip external URLs
+    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('mailto:')) {
+      return match;
+    }
+
+    // Skip wiki links (already converted)
+    if (match.startsWith('[[')) {
+      return match;
+    }
+
+    // Decode URL-encoded paths
+    const decodedPath = decodeURIComponent(path);
+
+    // Replace old directory names with cleaned names
+    let updatedPath = decodedPath;
+    for (const [oldName, newName] of dirNameMap.entries()) {
+      // Match directory name at start of path or after /
+      const pattern = new RegExp(`(^|/)${oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(/|$)`, 'g');
+      updatedPath = updatedPath.replace(pattern, `$1${newName}$2`);
+    }
+
+    // Re-encode if needed (preserve URL encoding for spaces, etc.)
+    if (updatedPath !== decodedPath) {
+      // Encode the path, but preserve / as separator
+      const parts = updatedPath.split('/');
+      const encodedParts = parts.map(part => encodeURIComponent(part));
+      updatedPath = encodedParts.join('/');
+    }
+
+    return prefix + updatedPath + suffix;
+  });
+}
+
+// ============================================================================
 // File Processing
 // ============================================================================
 
-async function processFileContent(filePath, metadata, fileMap, baseDir) {
+async function processFileContent(filePath, metadata, fileMap, baseDir, dirNameMap = new Map()) {
   const file = Bun.file(filePath);
   const content = await file.text();
 
@@ -351,32 +382,26 @@ async function processFileContent(filePath, metadata, fileMap, baseDir) {
   // Convert markdown links to wiki links and count them
   let linkCount = 0;
   newContent = newContent.replace(PATTERNS.mdLink, (match) => {
-    linkCount++;
-    return convertMarkdownLinkToWiki(match, fileMap, filePath);
+    const converted = convertMarkdownLinkToWiki(match, fileMap, filePath);
+    if (converted !== match) {
+      linkCount++;
+    }
+    return converted;
   });
+
+  // Update asset paths to use cleaned directory names
+  newContent = cleanAssetPaths(newContent, dirNameMap);
 
   return { newContent, linkCount, hadFrontmatter: hasFrontmatter };
 }
 
-async function updateFileContent(filePath, metadata, fileMap, baseDir, skipBackup = false) {
+async function updateFileContent(filePath, metadata, fileMap, baseDir, dirNameMap = new Map()) {
   try {
-    const { newContent, linkCount, skipped } = await processFileContent(filePath, metadata, fileMap, baseDir);
+    const { newContent, linkCount, skipped } = await processFileContent(filePath, metadata, fileMap, baseDir, dirNameMap);
 
     // Skip completely empty files
     if (skipped) {
       return { success: true, linkCount: 0, skipped: true };
-    }
-
-    // Create backup unless skipped
-    if (!skipBackup) {
-      // Check if backup already exists to avoid overwriting
-      let backupPath = `${filePath}.backup`;
-      let version = 1;
-      while (await stat(backupPath).catch(() => false)) {
-        backupPath = `${filePath}.backup.${version}`;
-        version++;
-      }
-      await copyFile(filePath, backupPath);
     }
 
     await Bun.write(filePath, newContent);
@@ -467,12 +492,12 @@ class MigrationStats {
     this.renamedFiles = 0;
     this.renamedDirs = 0;
     this.totalLinks = 0;
-    this.errors = [];
+    this.namingConflicts = [];
     this.duplicates = 0;
   }
 
-  addError(filePath, error) {
-    this.errors.push({ filePath, error });
+  addNamingConflict(filePath, resolution) {
+    this.namingConflicts.push({ filePath, resolution });
   }
 
   getSummary() {
@@ -482,7 +507,7 @@ class MigrationStats {
       renamedFiles: this.renamedFiles,
       renamedDirs: this.renamedDirs,
       totalLinks: this.totalLinks,
-      errorCount: this.errors.length,
+      namingConflictCount: this.namingConflicts.length,
       duplicates: this.duplicates
     };
   }
@@ -497,16 +522,26 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
 
   const zipDir = dirname(zipPath);
   const zipBaseName = basename(zipPath, '.zip');
-  const extractDir = join(zipDir, `${zipBaseName}-extracted`);
+
+  // Shorten the directory name by truncating long hashes/UUIDs
+  // Pattern: Export-2d6fa1e5-8571-4845-8e81-f7d5ca30194a-Part-1 → Export-2d6f
+  let shortName = zipBaseName;
+  // Match UUID format (with hyphens) or plain hex (without hyphens)
+  const uuidPattern = /^(Export-[0-9a-fA-F]{4})[0-9a-fA-F-]{24,}/;
+  const match = zipBaseName.match(uuidPattern);
+  if (match) {
+    shortName = match[1];  // e.g., "Export-2d6f"
+  }
+
+  const extractDir = join(zipDir, `${shortName}-extracted`);
 
   console.log(chalk.cyan('📦 Extracting zip file...'));
   console.log(chalk.gray(`Extracting to: ${extractDir}`));
 
   if (sample) {
-    console.log(chalk.yellow(`Sample mode: extracting up to ${samplePercentage * 100}% or ${Math.round(maxSampleBytes / 1_000_000)}MB for preview\n`));
-  } else {
-    console.log(chalk.yellow('This may take a while for large files...\n'));
+    console.log(chalk.yellow(`Sample mode: extracting up to ${samplePercentage * 100}% or ${Math.round(maxSampleBytes / 1_000_000)}MB for preview`));
   }
+  console.log();
 
   try {
     // Read zip file
@@ -516,15 +551,18 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
     // Extract using fflate
     const unzipped = unzipSync(zipBuffer, {
       filter(file) {
-        // Skip macOS metadata files
-        return !file.name.includes('__MACOSX') && !file.name.startsWith('.');
+        // Skip macOS metadata files and directories
+        return !file.name.includes('__MACOSX') &&
+               !file.name.split('/').some(p => p.startsWith('.'));
       }
     });
 
-    // For sampling, select a subset of files
-    let filesToExtract = Object.entries(unzipped);
+    // Convert to array and filter out directories (entries ending with /)
+    const filesToExtract = Object.entries(unzipped).filter(([path]) => !path.endsWith('/'));
+
     let isSampled = false;
     let totalFiles = filesToExtract.length;
+    let selectedFiles = filesToExtract;
 
     if (sample) {
       // Calculate sample size
@@ -536,15 +574,15 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
       let totalBytes = 0;
 
       for (let i = 0; i < totalFiles && sampledFiles.length < targetCount; i += step) {
-        const [path, content] = filesToExtract[i];
-        if (totalBytes + content.length > maxSampleBytes && sampledFiles.length > 0) {
+        const [path, data] = filesToExtract[i];
+        if (totalBytes + data.length > maxSampleBytes && sampledFiles.length > 0) {
           break; // Stop if we exceed size limit
         }
-        sampledFiles.push([path, content]);
-        totalBytes += content.length;
+        sampledFiles.push([path, data]);
+        totalBytes += data.length;
       }
 
-      filesToExtract = sampledFiles;
+      selectedFiles = sampledFiles;
       isSampled = true;
     }
 
@@ -553,11 +591,7 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
 
     // Write files
     let fileCount = 0;
-    const progressInterval = setInterval(() => {
-      process.stdout.write(chalk.gray('.'));
-    }, 500);
-
-    for (const [filePath, content] of filesToExtract) {
+    for (const [filePath, content] of selectedFiles) {
       const fullPath = join(extractDir, filePath);
 
       // Create directory structure
@@ -565,11 +599,9 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
 
       // Write file
       await writeFile(fullPath, content);
+
       fileCount++;
     }
-
-    clearInterval(progressInterval);
-    process.stdout.write('\n');
 
     if (isSampled) {
       console.log(chalk.green(`✓ Extracted ${fileCount} of ${totalFiles} files (${Math.round(fileCount / totalFiles * 100)}% sample)\n`));
@@ -584,11 +616,17 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
       const subdirStat = await stat(potentialSubdir).catch(() => null);
       if (subdirStat?.isDirectory()) {
         console.log(chalk.gray(`Using subdirectory: ${entries[0]}\n`));
-        return { path: potentialSubdir, isSampled, sampleCount: fileCount, totalCount: totalFiles };
+        return {
+          path: potentialSubdir,
+          extractDir, // Return parent for cleanup
+          isSampled,
+          sampleCount: fileCount,
+          totalCount: totalFiles
+        };
       }
     }
 
-    return { path: extractDir, isSampled, sampleCount: fileCount, totalCount: totalFiles };
+    return { path: extractDir, extractDir, isSampled, sampleCount: fileCount, totalCount: totalFiles };
   } catch (err) {
     // Clean up on error
     await rm(extractDir, { recursive: true, force: true });
@@ -596,23 +634,11 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
   }
 }
 
-async function cleanupExtractedDirectory(extractedDir) {
-  console.log(chalk.yellow('\nKeep extracted files? (y/N): '));
-
-  const reader = Bun.stdin.stream().getReader();
-  const { value } = await reader.read();
-  reader.releaseLock();
-
-  const response = new TextDecoder().decode(value).trim().toLowerCase();
-
-  if (response === 'y' || response === 'yes') {
-    console.log(chalk.green(`\n✓ Files kept at: ${chalk.blue(extractedDir)}`));
-    console.log(chalk.gray('You can now open this directory in Obsidian.\n'));
-  } else {
-    console.log(chalk.gray('\nCleaning up extracted files...'));
-    await rm(extractedDir, { recursive: true, force: true });
-    console.log(chalk.green('✓ Extracted files removed\n'));
-  }
+async function showExtractedDirectoryInfo(extractedDir) {
+  console.log(chalk.cyan.bold('\n📁 Extracted Directory:'));
+  console.log(chalk.blue(`   ${extractedDir}`));
+  console.log(chalk.gray('\n   You can now open this directory in Obsidian.'));
+  console.log(chalk.gray(`   To remove the extracted files, run: ${chalk.white(`rm -rf "${extractedDir}"`)}\n`));
 }
 
 // ============================================================================
@@ -660,8 +686,8 @@ async function main() {
         samplePercentage: 0.10,
         maxSampleBytes: 10_000_000
       });
-      extractedTempDir = result.path;
-      config.targetDir = result.path;
+      extractedTempDir = result.extractDir;  // Store parent dir for cleanup
+      config.targetDir = result.path;        // Use subdirectory for migration
       config.zipSampleInfo = result.isSampled ? {
         sampled: result.sampleCount,
         total: result.totalCount
@@ -720,20 +746,9 @@ async function main() {
 
   console.log(chalk.yellow('Phase 1: Analyzing files and building migration map...\n'));
 
-  // Create progress bar for file scanning
-  const scanBar = new cliProgress.SingleBar({
-    format: 'Scanning |' + chalk.cyan('{bar}') + '| {percentage}% | {value}/{total} files',
-    barCompleteChar: '\u2588',
-    barIncompleteChar: '\u2591',
-    hideCursor: true
-  });
-
   // Scan for all files (excluding backups)
   const glob = new Glob("**/*.md");
   const files = [];
-
-  scanBar.start(100, 0);
-  let fileCount = 0;
 
   for await (const file of glob.scan({
     cwd: config.targetDir,
@@ -743,19 +758,11 @@ async function main() {
     // Skip backup files from previous runs
     if (!file.endsWith('.backup')) {
       files.push(file);
-      fileCount++;
-      if (fileCount % 10 === 0) {
-        scanBar.update(Math.min(50, fileCount / 10));
-      }
     }
   }
 
-  scanBar.update(50);
-
   // Scan for all directories
   const dirs = await getAllDirectories(config.targetDir);
-  scanBar.update(100);
-  scanBar.stop();
 
   stats.totalFiles = files.length;
 
@@ -806,38 +813,22 @@ async function main() {
   const dirMigrationMap = [];
 
   // Process files metadata
-  const metadataBar = new cliProgress.SingleBar({
-    format: 'Analyzing |' + chalk.cyan('{bar}') + '| {percentage}% | {value}/{total} files',
-    barCompleteChar: '\u2588',
-    barIncompleteChar: '\u2591',
-    hideCursor: true
-  });
-
-  metadataBar.start(files.length, 0);
-
   for (let i = 0; i < files.length; i++) {
     const filePath = files[i];
     const filename = basename(filePath);
     const cleanedName = cleanName(filename);
     const notionId = extractNotionId(filename);
 
-    const fileStats = await getFileStats(filePath);
     const tags = getTagsFromPath(filePath, config.targetDir);
 
     // Build aliases
     const aliases = [];
     if (filename !== cleanedName) {
       aliases.push(filename.replace('.md', ''));
-      const encoded = encodeURIComponent(filename.replace('.md', ''));
-      if (encoded !== filename.replace('.md', '')) {
-        aliases.push(encoded);
-      }
     }
 
     const metadata = {
       title: cleanedName.replace('.md', ''),
-      created: fileStats.created,
-      modified: fileStats.modified,
       tags: tags,
       aliases: aliases,
       notionId: notionId
@@ -851,11 +842,7 @@ async function main() {
       metadata: metadata,
       needsRename: filename !== cleanedName
     });
-
-    metadataBar.update(i + 1);
   }
-
-  metadataBar.stop();
 
   // Process directories
   for (const dirPath of dirs) {
@@ -884,21 +871,19 @@ async function main() {
   console.log(chalk.green(`Files to rename: ${filesToRename.length}`));
 
   if (filesToRename.length > 0) {
-    console.log(chalk.gray('\nSample files (first 3):'));
-    for (const file of filesToRename.slice(0, 3)) {
-      console.log(`  ${chalk.red('−')} ${file.oldName}`);
-      console.log(`  ${chalk.green('+')} ${file.newName}\n`);
-    }
+    console.log(chalk.gray('\nSample:'));
+    const file = filesToRename[0];
+    console.log(`  ${chalk.red('−')} ${file.oldName}`);
+    console.log(`  ${chalk.green('+')} ${file.newName}\n`);
   }
 
   // Show directory renames
   if (dirMigrationMap.length > 0) {
     console.log(chalk.green(`Directories to rename: ${dirMigrationMap.length}`));
-    console.log(chalk.gray('\nSample directories (first 3):'));
-    for (const dir of dirMigrationMap.slice(0, 3)) {
-      console.log(`  ${chalk.red('−')} ${dir.oldName}`);
-      console.log(`  ${chalk.green('+')} ${dir.newName}\n`);
-    }
+    console.log(chalk.gray('\nSample:'));
+    const dir = dirMigrationMap[0];
+    console.log(`  ${chalk.red('−')} ${dir.oldName}`);
+    console.log(`  ${chalk.green('+')} ${dir.newName}\n`);
   }
 
   // Show duplicate handling
@@ -921,23 +906,29 @@ async function main() {
     console.log(chalk.gray(generateFrontmatter(sample.metadata, relativePath)));
   }
 
+  // Build directory name mapping for asset path updates
+  const dirNameMap = new Map();
+  for (const dir of dirMigrationMap) {
+    dirNameMap.set(dir.oldName, dir.newName);
+  }
+
   // Calculate link count estimate
   let estimatedLinkCount = 0;
   const sampleSize = Math.min(10, fileMigrationMap.length);
   for (let i = 0; i < sampleSize; i++) {
     const sample = fileMigrationMap[i];
-    const { linkCount } = await processFileContent(sample.oldPath, sample.metadata, fileMap, config.targetDir);
+    const { linkCount } = await processFileContent(sample.oldPath, sample.metadata, fileMap, config.targetDir, dirNameMap);
     estimatedLinkCount += linkCount;
   }
   const avgLinksPerFile = sampleSize > 0 ? estimatedLinkCount / sampleSize : 0;
   const totalEstimatedLinks = Math.round(avgLinksPerFile * fileMigrationMap.length);
 
   console.log(chalk.yellow.bold('\n═══ SUMMARY ═══'));
-  console.log(`  • Add frontmatter to ${chalk.blue(fileMigrationMap.length)} files`);
-  console.log(`  • Convert ~${chalk.blue(totalEstimatedLinks)} markdown links to wiki links`);
-  console.log(`  • Handle ${chalk.blue(duplicates.size)} duplicate filenames with folder context`);
-  console.log(`  • Rename ${chalk.blue(filesToRename.length)} files`);
-  console.log(`  • Rename ${chalk.blue(dirMigrationMap.length)} directories`);
+  console.log(`  📄 Add frontmatter to ${chalk.blue(fileMigrationMap.length)} files`);
+  console.log(`  🔗 Convert ~${chalk.blue(totalEstimatedLinks)} markdown links to wiki links`);
+  console.log(`  📋 Handle ${chalk.blue(duplicates.size)} duplicate filenames with folder context`);
+  console.log(`  ✏️  Rename ${chalk.blue(filesToRename.length)} files`);
+  console.log(`  📁 Rename ${chalk.blue(dirMigrationMap.length)} directories`);
 
   // Wait for confirmation
   await promptForConfirmation(config.dryRun);
@@ -959,22 +950,13 @@ async function main() {
   // Step 1: Add frontmatter and convert links
   console.log(chalk.green('Step 1: Adding frontmatter and converting links...'));
 
-  const contentBar = new cliProgress.SingleBar({
-    format: 'Processing |' + chalk.cyan('{bar}') + '| {percentage}% | {value}/{total} files',
-    barCompleteChar: '\u2588',
-    barIncompleteChar: '\u2591',
-    hideCursor: true
-  });
-
-  contentBar.start(fileMigrationMap.length, 0);
-
   // Process files in batches
   for (let i = 0; i < fileMigrationMap.length; i += BATCH_SIZE) {
     const batch = fileMigrationMap.slice(i, i + BATCH_SIZE);
 
     const results = await Promise.all(
       batch.map(file =>
-        updateFileContent(file.oldPath, file.metadata, fileMap, config.targetDir, config.skipBackup)
+        updateFileContent(file.oldPath, file.metadata, fileMap, config.targetDir, dirNameMap)
       )
     );
 
@@ -983,27 +965,15 @@ async function main() {
         stats.processedFiles++;
         stats.totalLinks += result.linkCount;
       } else {
-        stats.addError(batch[idx].oldPath, result.error);
+        stats.addNamingConflict(batch[idx].oldPath, result.error);
       }
     });
-
-    contentBar.update(Math.min(i + BATCH_SIZE, fileMigrationMap.length));
   }
 
-  contentBar.stop();
   console.log(`  ${chalk.green('✓')} Processed ${stats.processedFiles} files, converted ${stats.totalLinks} links\n`);
 
   // Step 2: Rename files
   console.log(chalk.green('Step 2: Renaming files...'));
-
-  const renameBar = new cliProgress.SingleBar({
-    format: 'Renaming |' + chalk.cyan('{bar}') + '| {percentage}% | {value}/{total} files',
-    barCompleteChar: '\u2588',
-    barIncompleteChar: '\u2591',
-    hideCursor: true
-  });
-
-  renameBar.start(filesToRename.length, 0);
 
   for (let i = 0; i < filesToRename.length; i++) {
     const file = filesToRename[i];
@@ -1021,32 +991,21 @@ async function main() {
           alternativePath = join(dir, `${nameWithoutExt}-${counter}${ext}`);
         }
         await rename(file.oldPath, alternativePath);
-        stats.addError(file.oldPath, `Target exists, renamed to ${basename(alternativePath)}`);
+        stats.addNamingConflict(file.oldPath, `Target exists, renamed to ${basename(alternativePath)}`);
         stats.renamedFiles++;
       } else {
         await rename(file.oldPath, file.newPath);
         stats.renamedFiles++;
       }
     } catch (err) {
-      stats.addError(file.oldPath, err.message);
+      stats.addNamingConflict(file.oldPath, err.message);
     }
-    renameBar.update(i + 1);
   }
 
-  renameBar.stop();
   console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedFiles} files\n`);
 
   // Step 3: Rename directories
   console.log(chalk.green('Step 3: Renaming directories...'));
-
-  const dirBar = new cliProgress.SingleBar({
-    format: 'Renaming |' + chalk.cyan('{bar}') + '| {percentage}% | {value}/{total} directories',
-    barCompleteChar: '\u2588',
-    barIncompleteChar: '\u2591',
-    hideCursor: true
-  });
-
-  dirBar.start(dirMigrationMap.length, 0);
 
   for (let i = 0; i < dirMigrationMap.length; i++) {
     const dir = dirMigrationMap[i];
@@ -1063,36 +1022,34 @@ async function main() {
           alternativePath = join(parentDir, `${dirName}-${counter}`);
         }
         await rename(dir.oldPath, alternativePath);
-        stats.addError(dir.oldPath, `Target exists, renamed to ${basename(alternativePath)}`);
+        stats.addNamingConflict(dir.oldPath, `Target exists, renamed to ${basename(alternativePath)}`);
         stats.renamedDirs++;
       } else {
         await rename(dir.oldPath, dir.newPath);
         stats.renamedDirs++;
       }
     } catch (err) {
-      stats.addError(dir.oldPath, err.message);
+      stats.addNamingConflict(dir.oldPath, err.message);
     }
-    dirBar.update(i + 1);
   }
 
-  dirBar.stop();
   console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedDirs} directories\n`);
 
   // Final summary
   console.log(chalk.green.bold('✅ Migration complete!\n'));
   console.log(chalk.white('Summary:'));
-  console.log(`   • Added frontmatter to ${chalk.cyan(stats.processedFiles)} files`);
-  console.log(`   • Converted ${chalk.cyan(stats.totalLinks)} markdown links to wiki links`);
-  console.log(`   • Renamed ${chalk.cyan(stats.renamedFiles)} files`);
-  console.log(`   • Renamed ${chalk.cyan(stats.renamedDirs)} directories`);
+  console.log(`   📄 Added frontmatter to ${chalk.cyan(stats.processedFiles)} files`);
+  console.log(`   🔗 Converted ${chalk.cyan(stats.totalLinks)} markdown links to wiki links`);
+  console.log(`   ✏️  Renamed ${chalk.cyan(stats.renamedFiles)} files`);
+  console.log(`   📁 Renamed ${chalk.cyan(stats.renamedDirs)} directories`);
 
-  if (stats.errors.length > 0) {
-    console.log(chalk.red(`\n⚠ ${stats.errors.length} errors occurred:`));
-    stats.errors.slice(0, 5).forEach(({ filePath, error }) => {
-      console.log(chalk.red(`   • ${basename(filePath)}: ${error}`));
+  if (stats.namingConflicts.length > 0) {
+    console.log(chalk.yellow(`\n📝 ${stats.namingConflicts.length} naming conflicts resolved:`));
+    stats.namingConflicts.slice(0, 5).forEach(({ filePath, resolution }) => {
+      console.log(chalk.gray(`   • ${basename(filePath)}: ${resolution}`));
     });
-    if (stats.errors.length > 5) {
-      console.log(chalk.gray(`   ... and ${stats.errors.length - 5} more`));
+    if (stats.namingConflicts.length > 5) {
+      console.log(chalk.gray(`   ... and ${stats.namingConflicts.length - 5} more`));
     }
   }
 
@@ -1100,16 +1057,13 @@ async function main() {
   console.log(chalk.gray('   • Duplicate filenames preserved with folder context'));
   console.log(chalk.gray('   • Original filenames stored as aliases'));
   console.log(chalk.gray('   • URL-encoded links converted to wiki links'));
-  if (!config.skipBackup) {
-    console.log(chalk.gray('   • Backup files created (.backup extension)'));
-  }
 
   console.log(chalk.cyan.bold('\n🎉 Your Notion export is now ready for Obsidian!'));
-  console.log(`Open Obsidian and select: ${chalk.blue(config.targetDir)}`);
+  console.log(`Open directory: ${chalk.blue(basename(config.targetDir))}`);
 
-  // Handle extracted directory cleanup if zip was extracted
+  // Show extracted directory info if zip was extracted
   if (extractedTempDir) {
-    await cleanupExtractedDirectory(extractedTempDir);
+    await showExtractedDirectoryInfo(extractedTempDir);
   }
 }
 
