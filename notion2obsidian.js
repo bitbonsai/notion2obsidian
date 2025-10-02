@@ -68,25 +68,26 @@ function parseArgs() {
 
 function showHelp() {
   console.log(`
-${chalk.cyan.bold('📦 Notion to Obsidian')}
+${chalk.blueBright.bold('💎 Notion to Obsidian')}
 
 ${chalk.yellow('Usage:')}
   notion2obsidian [directory|zip-file] [options]
 
 ${chalk.yellow('Options:')}
   -d, --dry-run       Preview changes without modifying files
+                      (extracts 10% sample or 10MB max for zip files)
   --skip-backup       Skip creating backup files (faster but risky)
   -v, --verbose       Show detailed processing information
   -h, --help          Show this help message
 
 ${chalk.yellow('Examples:')}
-  notion2obsidian ./my-notion-export
   notion2obsidian ./Export-abc123.zip
+  notion2obsidian ./Export-abc123.zip --dry-run
+  notion2obsidian ./my-notion-export
   notion2obsidian ./my-export --dry-run
-  notion2obsidian --verbose
 
-${chalk.cyan('Features:')}
-  • Accepts zip files directly (extracts to temp directory)
+${chalk.blueBright('Features:')}
+  • Accepts zip files directly (extracts to same directory)
   • Removes Notion IDs from filenames and directories
   • Adds YAML frontmatter with metadata
   • Converts markdown links to wiki links
@@ -491,14 +492,21 @@ class MigrationStats {
 // Zip Extraction
 // ============================================================================
 
-async function extractZipToSameDirectory(zipPath) {
+async function extractZipToSameDirectory(zipPath, options = {}) {
+  const { sample = false, samplePercentage = 0.10, maxSampleBytes = 10_000_000 } = options;
+
   const zipDir = dirname(zipPath);
   const zipBaseName = basename(zipPath, '.zip');
   const extractDir = join(zipDir, `${zipBaseName}-extracted`);
 
   console.log(chalk.cyan('📦 Extracting zip file...'));
   console.log(chalk.gray(`Extracting to: ${extractDir}`));
-  console.log(chalk.yellow('This may take a while for large files...\n'));
+
+  if (sample) {
+    console.log(chalk.yellow(`Sample mode: extracting up to ${samplePercentage * 100}% or ${Math.round(maxSampleBytes / 1_000_000)}MB for preview\n`));
+  } else {
+    console.log(chalk.yellow('This may take a while for large files...\n'));
+  }
 
   try {
     // Read zip file
@@ -513,16 +521,43 @@ async function extractZipToSameDirectory(zipPath) {
       }
     });
 
+    // For sampling, select a subset of files
+    let filesToExtract = Object.entries(unzipped);
+    let isSampled = false;
+    let totalFiles = filesToExtract.length;
+
+    if (sample) {
+      // Calculate sample size
+      const targetCount = Math.ceil(totalFiles * samplePercentage);
+
+      // Sample evenly distributed files
+      const step = Math.max(1, Math.floor(totalFiles / targetCount));
+      const sampledFiles = [];
+      let totalBytes = 0;
+
+      for (let i = 0; i < totalFiles && sampledFiles.length < targetCount; i += step) {
+        const [path, content] = filesToExtract[i];
+        if (totalBytes + content.length > maxSampleBytes && sampledFiles.length > 0) {
+          break; // Stop if we exceed size limit
+        }
+        sampledFiles.push([path, content]);
+        totalBytes += content.length;
+      }
+
+      filesToExtract = sampledFiles;
+      isSampled = true;
+    }
+
     // Create extraction directory
     await mkdir(extractDir, { recursive: true });
 
-    // Write all files
+    // Write files
     let fileCount = 0;
     const progressInterval = setInterval(() => {
       process.stdout.write(chalk.gray('.'));
     }, 500);
 
-    for (const [filePath, content] of Object.entries(unzipped)) {
+    for (const [filePath, content] of filesToExtract) {
       const fullPath = join(extractDir, filePath);
 
       // Create directory structure
@@ -536,20 +571,24 @@ async function extractZipToSameDirectory(zipPath) {
     clearInterval(progressInterval);
     process.stdout.write('\n');
 
-    console.log(chalk.green(`✓ Extraction complete (${fileCount} files)\n`));
+    if (isSampled) {
+      console.log(chalk.green(`✓ Extracted ${fileCount} of ${totalFiles} files (${Math.round(fileCount / totalFiles * 100)}% sample)\n`));
+    } else {
+      console.log(chalk.green(`✓ Extraction complete (${fileCount} files)\n`));
+    }
 
     // Check if zip extracted to a single top-level directory
     const entries = await readdir(extractDir);
     if (entries.length === 1) {
       const potentialSubdir = join(extractDir, entries[0]);
-      const subdirStat = await stat(potentialSubdir);
-      if (subdirStat.isDirectory()) {
+      const subdirStat = await stat(potentialSubdir).catch(() => null);
+      if (subdirStat?.isDirectory()) {
         console.log(chalk.gray(`Using subdirectory: ${entries[0]}\n`));
-        return potentialSubdir;
+        return { path: potentialSubdir, isSampled, sampleCount: fileCount, totalCount: totalFiles };
       }
     }
 
-    return extractDir;
+    return { path: extractDir, isSampled, sampleCount: fileCount, totalCount: totalFiles };
   } catch (err) {
     // Clean up on error
     await rm(extractDir, { recursive: true, force: true });
@@ -614,10 +653,19 @@ async function main() {
       process.exit(1);
     }
 
-    // Extract zip to same directory
+    // Extract zip to same directory (use sampling for dry-run)
     try {
-      extractedTempDir = await extractZipToSameDirectory(config.targetDir);
-      config.targetDir = extractedTempDir;
+      const result = await extractZipToSameDirectory(config.targetDir, {
+        sample: config.dryRun,
+        samplePercentage: 0.10,
+        maxSampleBytes: 10_000_000
+      });
+      extractedTempDir = result.path;
+      config.targetDir = result.path;
+      config.zipSampleInfo = result.isSampled ? {
+        sampled: result.sampleCount,
+        total: result.totalCount
+      } : null;
     } catch (err) {
       console.log(chalk.red(`Error extracting zip file: ${err.message}`));
       process.exit(1);
@@ -712,7 +760,13 @@ async function main() {
   stats.totalFiles = files.length;
 
   console.log(`Found ${chalk.blue(files.length)} markdown files`);
-  console.log(`Found ${chalk.blue(dirs.length)} directories\n`);
+  console.log(`Found ${chalk.blue(dirs.length)} directories`);
+
+  // Show sample info if applicable
+  if (config.zipSampleInfo) {
+    console.log(chalk.yellow(`⚠ Dry-run preview based on ${config.zipSampleInfo.sampled} of ${config.zipSampleInfo.total} files from zip`));
+  }
+  console.log();
 
   // Check if any files were found
   if (files.length === 0) {
