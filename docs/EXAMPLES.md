@@ -1,3 +1,12 @@
+---
+title: "EXAMPLES"
+created: 2025-10-02
+modified: 2025-10-02
+tags: [docs]
+folder: "docs"
+published: false
+---
+
 # Example: Before and After Migration
 
 This document shows what the migration tool does with concrete examples.
@@ -53,9 +62,9 @@ This project aims to improve our workflow.
 
 ## Links
 
-Check out [Project Beta](Project%20Beta%20def999888777666555444333222.md) for related work.
+Check out [[Project Beta def999888777666555444333222|Project Beta]] for related work.
 
-See also [Meeting Notes](../Meeting%20Notes%20444555666777888999000111222.md).
+See also [[Meeting Notes 444555666777888999000111222|Meeting Notes]].
 ```
 
 #### After (Project Alpha.md)
@@ -113,7 +122,7 @@ Completion: 0.75
 
 ## Action Items
 
-- Follow up on [Project Alpha](Projects/Project%20Alpha%20abc111222333444555666777888.md)
+- Follow up on [[Project Alpha abc111222333444555666777888|Project Alpha]]
 - Schedule next meeting
 ```
 
@@ -209,15 +218,15 @@ Check out the [[Ideas#productivity-tips|productivity section]].
 
 | Before | After |
 |--------|-------|
-| `[My Note](My%20Note%20abc123.md)` | `[[My Note]]` |
-| `[Document](Document%20xyz789.md)` | `[[Document]]` |
+| `[[My Note abc123|My Note]]` | `[[My Note]]` |
+| `[[Document xyz789|Document]]` | `[[Document]]` |
 
 ### Links with Different Text
 
 | Before | After |
 |--------|-------|
-| `[click here](My%20Note%20abc123.md)` | `[[My Note\|click here]]` |
-| `[see this](Document%20xyz789.md)` | `[[Document\|see this]]` |
+| `[[My Note abc123|click here]]` | `[[My Note\|click here]]` |
+| `[[Document xyz789|see this]]` | `[[Document\|see this]]` |
 
 ### Links with Anchors
 
@@ -230,8 +239,8 @@ Check out the [[Ideas#productivity-tips|productivity section]].
 
 | Before | After |
 |--------|-------|
-| `[Note](../Other/Note%20abc123.md)` | `[[Note]]` |
-| `[File](./Subfolder/File%20xyz789.md)` | `[[File]]` |
+| `[[Note abc123|Note]]` | `[[Note]]` |
+| `[[File xyz789|File]]` | `[[File]]` |
 
 ### External Links (Preserved)
 
@@ -324,7 +333,7 @@ my-export/
 Status: Complete
 Owner: Jane
 
-Discussed [Project Alpha](Project%20Alpha%20xyz789.md).
+Discussed [[Project Alpha xyz789|Project Alpha]].
 ```
 
 ### After Migration
@@ -381,7 +390,7 @@ Discussed [[Project Alpha]].
 ```bash
 mkdir test-export
 cd test-export
-echo "# Test Note\nSee [Other](Other%20abc123.md)." > "Test abc123.md"
+echo "# Test Note\nSee [[Other abc123|Other]]." > "Test abc123.md"
 echo "# Other\nContent here." > "Other abc123.md"
 ```
 

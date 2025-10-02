@@ -1,3 +1,12 @@
+---
+title: "GETTING_STARTED"
+created: 2025-10-02
+modified: 2025-10-02
+tags: [docs]
+folder: "docs"
+published: false
+---
+
 # 🚀 Getting Started Guide
 
 Welcome! This guide will help you migrate your Notion export to Obsidian in just a few minutes.
@@ -83,7 +92,7 @@ mkdir test-notion-export
 cd test-notion-export
 
 # Create sample files
-echo "# Test Note\nSee [Other](Other%20abc123.md)." > "Test abc123.md"
+echo "# Test Note\nSee [[Other abc123|Other]]." > "Test abc123.md"
 echo "# Other Note\nContent here." > "Other abc123.md"
 
 # Go back
@@ -219,7 +228,7 @@ After migration, each file will have:
 
 1. **Clean filename** - No more Notion IDs
 2. **YAML frontmatter** - Metadata at the top
-3. **Wiki links** - `[[Note]]` instead of `[Note](Note%20abc.md)`
+3. **Wiki links** - `[[Note]]` instead of `[[Note abc|Note]]`
 4. **Tags** - Generated from folder structure
 5. **Aliases** - Original filename preserved
 

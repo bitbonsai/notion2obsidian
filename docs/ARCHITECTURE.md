@@ -1,3 +1,12 @@
+---
+title: "ARCHITECTURE"
+created: 2025-10-02
+modified: 2025-10-02
+tags: [docs]
+folder: "docs"
+published: false
+---
+
 # Architecture & Flow Diagrams
 
 ## System Architecture

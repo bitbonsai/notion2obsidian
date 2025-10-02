@@ -7,13 +7,24 @@ import chalk from "chalk";
 import cliProgress from "cli-progress";
 
 // ============================================================================
+// Runtime Check
+// ============================================================================
+
+if (typeof Bun === 'undefined') {
+  console.error(chalk.red('✗ Error: This tool requires Bun runtime\n'));
+  console.error('Install Bun: ' + chalk.cyan('curl -fsSL https://bun.sh/install | bash'));
+  console.error('Or visit: ' + chalk.cyan('https://bun.sh') + '\n');
+  process.exit(1);
+}
+
+// ============================================================================
 // Configuration & Constants
 // ============================================================================
 
 const PATTERNS = {
   hexId: /^[0-9a-fA-F]{32}$/,
   mdLink: /\[([^\]]+)\]\(([^)]+\.md)\)/g,
-  frontmatter: /^---\n/,
+  frontmatter: /^\uFEFF?\s*---\s*\n/,  // Handle BOM and whitespace
   notionIdExtract: /\s([0-9a-fA-F]{32})(?:\.[^.]+)?$/
 };
 
@@ -29,12 +40,13 @@ function parseArgs() {
     targetDir: '.',
     dryRun: false,
     skipBackup: false,
-    verbose: false
+    verbose: false,
+    dirExplicitlyProvided: false
   };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
+
     if (arg === '--dry-run' || arg === '-d') {
       config.dryRun = true;
     } else if (arg === '--skip-backup') {
@@ -46,6 +58,7 @@ function parseArgs() {
       process.exit(0);
     } else if (!arg.startsWith('-')) {
       config.targetDir = arg;
+      config.dirExplicitlyProvided = true;
     }
   }
 
@@ -54,7 +67,7 @@ function parseArgs() {
 
 function showHelp() {
   console.log(`
-${chalk.cyan.bold('Notion Export Migration Tool')}
+${chalk.cyan.bold('Notion to Obsidian')}
 
 ${chalk.yellow('Usage:')}
   notion2obsidian [directory] [options]
@@ -92,26 +105,33 @@ function extractNotionId(filename) {
   return match ? match[1] : null;
 }
 
+function sanitizeFilename(name) {
+  // Replace Windows forbidden characters: < > : " / \ | ? *
+  // Also replace any other control characters
+  return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '-');
+}
+
 function cleanName(filename) {
   const ext = extname(filename);
   const nameWithoutExt = filename.slice(0, -ext.length);
   const parts = nameWithoutExt.split(' ');
-  
+
   if (parts.length > 1 && isHexString(parts[parts.length - 1])) {
     parts.pop();
-    return parts.join(' ') + ext;
+    const cleanedName = parts.join(' ');
+    return sanitizeFilename(cleanedName) + ext;
   }
-  
-  return filename;
+
+  return sanitizeFilename(filename);
 }
 
 function cleanDirName(dirname) {
   const parts = dirname.split(' ');
   if (parts.length > 1 && isHexString(parts[parts.length - 1])) {
     parts.pop();
-    return parts.join(' ');
+    return sanitizeFilename(parts.join(' '));
   }
-  return dirname;
+  return sanitizeFilename(dirname);
 }
 
 // ============================================================================
@@ -152,34 +172,46 @@ function buildFileMap(files, baseDir) {
 function convertMarkdownLinkToWiki(link, fileMap, currentFilePath) {
   const match = link.match(/\[([^\]]+)\]\(([^)]+)\)/);
   if (!match) return link;
-  
+
   const [fullMatch, linkText, linkPath] = match;
-  
+
   // Skip external links
   if (linkPath.startsWith('http://') || linkPath.startsWith('https://')) {
     return link;
   }
-  
+
   // Parse path and anchor
   const [pathPart, anchor] = linkPath.split('#');
-  
+
   // Skip non-md files (images, etc)
   if (!pathPart.endsWith('.md')) {
     return link;
   }
-  
+
   // Decode the URL-encoded path
   const decodedPath = decodeURIComponent(pathPart);
-  const filename = basename(decodedPath);
-  const cleanedFilename = cleanName(filename);
+
+  // Resolve relative paths against current file's directory
+  let targetFilename;
+  if (decodedPath.startsWith('../') || decodedPath.startsWith('./')) {
+    // Resolve relative path
+    const currentDir = dirname(currentFilePath);
+    const resolvedPath = join(currentDir, decodedPath);
+    targetFilename = basename(resolvedPath);
+  } else {
+    // Just a filename
+    targetFilename = basename(decodedPath);
+  }
+
+  const cleanedFilename = cleanName(targetFilename);
   const cleanedName = cleanedFilename.replace('.md', '');
-  
+
   // Decode link text
   const decodedLinkText = decodeURIComponent(linkText);
-  
+
   // Build wiki link with optional anchor
   const anchorPart = anchor ? `#${anchor}` : '';
-  
+
   if (decodedLinkText === cleanedName || decodedLinkText === cleanedFilename) {
     // Simple wiki link
     return `[[${cleanedName}${anchorPart}]]`;
@@ -281,12 +313,18 @@ function generateFrontmatter(metadata, relativePath) {
 async function processFileContent(filePath, metadata, fileMap, baseDir) {
   const file = Bun.file(filePath);
   const content = await file.text();
+
+  // Skip completely empty files
+  if (!content || content.trim().length === 0) {
+    return { newContent: content, linkCount: 0, hadFrontmatter: false, skipped: true };
+  }
+
   const lines = content.split('\n');
-  
+
   // Extract inline metadata from content
   const inlineMetadata = extractInlineMetadataFromLines(lines.slice(0, 30));
   Object.assign(metadata, inlineMetadata);
-  
+
   // Check if file already has frontmatter
   const hasFrontmatter = PATTERNS.frontmatter.test(content);
   
@@ -432,7 +470,7 @@ async function promptForConfirmation(dryRun) {
 async function main() {
   const config = parseArgs();
   const stats = new MigrationStats();
-  
+
   // Check if directory exists
   try {
     await stat(config.targetDir);
@@ -440,8 +478,21 @@ async function main() {
     console.log(chalk.red(`Error: Directory ${config.targetDir} does not exist`));
     process.exit(1);
   }
-  
-  console.log(chalk.cyan.bold('🔍 Notion Export Migration Tool (Optimized)'));
+
+  // Confirm if using current directory without explicit argument
+  if (!config.dirExplicitlyProvided) {
+    const cwd = process.cwd();
+    console.log(chalk.yellow('⚠ No directory specified. This will run on the current directory:'));
+    console.log(chalk.blue(`  ${cwd}\n`));
+    console.log(chalk.yellow('Press ENTER to continue, or Ctrl+C to cancel...'));
+
+    const reader = Bun.stdin.stream().getReader();
+    await reader.read();
+    reader.releaseLock();
+    console.log();
+  }
+
+  console.log(chalk.cyan.bold('📦 Notion to Obsidian'));
   console.log(`Directory: ${chalk.blue(config.targetDir)}`);
   if (config.dryRun) {
     console.log(chalk.yellow.bold('Mode: DRY RUN (no changes will be made)'));
@@ -485,9 +536,30 @@ async function main() {
   scanBar.stop();
   
   stats.totalFiles = files.length;
-  
+
   console.log(`Found ${chalk.blue(files.length)} markdown files`);
   console.log(`Found ${chalk.blue(dirs.length)} directories\n`);
+
+  // Check if any files were found
+  if (files.length === 0) {
+    console.log(chalk.yellow('⚠ No markdown files found in this directory.'));
+    console.log(chalk.gray('Make sure you\'re running this in a Notion export directory.\n'));
+    process.exit(0);
+  }
+
+  // Validate that this looks like a Notion export
+  const notionFiles = files.filter(f => extractNotionId(basename(f)) !== null);
+  if (notionFiles.length === 0 && files.length > 0) {
+    console.log(chalk.yellow('⚠ Warning: No Notion ID patterns detected in filenames.'));
+    console.log(chalk.gray('This directory may not be a Notion export.'));
+    console.log(chalk.gray('Expected filenames like: "Document abc123def456...xyz.md"\n'));
+    console.log(chalk.yellow('Continue anyway? Press ENTER to proceed, or Ctrl+C to cancel...'));
+
+    const reader = Bun.stdin.stream().getReader();
+    await reader.read();
+    reader.releaseLock();
+    console.log();
+  }
   
   // Check for duplicates
   const duplicates = await findDuplicateNames(files);
@@ -591,6 +663,16 @@ async function main() {
     }
   }
   
+  // Show directory renames
+  if (dirMigrationMap.length > 0) {
+    console.log(chalk.green(`Directories to rename: ${dirMigrationMap.length}`));
+    console.log(chalk.gray('\nSample directories (first 3):'));
+    for (const dir of dirMigrationMap.slice(0, 3)) {
+      console.log(`  ${chalk.red('−')} ${dir.oldName}`);
+      console.log(`  ${chalk.green('+')} ${dir.newName}\n`);
+    }
+  }
+
   // Show duplicate handling
   if (duplicates.size > 0) {
     console.log(chalk.yellow('Duplicate handling:'));
@@ -601,7 +683,7 @@ async function main() {
     }
     console.log();
   }
-  
+
   // Show sample frontmatter
   console.log(chalk.cyan('Sample frontmatter:'));
   if (fileMigrationMap.length > 0) {

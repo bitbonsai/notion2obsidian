@@ -1,3 +1,10 @@
+---
+title: "README"
+created: 2025-10-02
+modified: 2025-10-02
+published: false
+---
+
 # Notion to Obsidian Migration Tool (Optimized)
 
 A high-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format with beautiful progress bars and comprehensive error handling.
@@ -25,7 +32,7 @@ A high-performance CLI tool to migrate Notion exports to Obsidian-compatible mar
    - Notion IDs for reference
    - Folder paths for duplicate disambiguation
    - Inline metadata (Status, Owner, Dates, Priority, Completion, Summary)
-3. **Converts links**: Transforms `[text](file.md)` → `[[file]]` or `[[file|alias]]`
+3. **Converts links**: Transforms `[[file|text]]` → `[[file]]` or `[[file|alias]]`
 4. **Handles anchors**: Preserves section links like `[text](file.md#section)` → `[[file#section|text]]`
 5. **Processes duplicates**: Uses folder context to handle files with identical names
 6. **Renames files and directories**: Strips Notion IDs from all names
@@ -275,7 +282,7 @@ Meeting Notes.md
 
 **Before:**
 ```markdown
-Check out [this document](My%20Other%20Note%20abc123def.md)
+Check out [[My Other Note abc123def|this document]]
 See [Section 2](Another%20Doc%20xyz789.md#section-2)
 ```
 

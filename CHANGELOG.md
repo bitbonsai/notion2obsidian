@@ -1,3 +1,10 @@
+---
+title: "CHANGELOG"
+created: 2025-10-02
+modified: 2025-10-02
+published: false
+---
+
 # Changelog
 
 All notable changes to the Notion to Obsidian Migration Tool.

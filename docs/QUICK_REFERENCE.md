@@ -1,3 +1,12 @@
+---
+title: "QUICK_REFERENCE"
+created: 2025-10-02
+modified: 2025-10-02
+tags: [docs]
+folder: "docs"
+published: false
+---
+
 # Quick Reference Guide
 
 ## 🚀 Quick Start

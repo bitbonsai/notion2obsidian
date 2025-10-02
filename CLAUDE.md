@@ -1,3 +1,10 @@
+---
+title: "CLAUDE"
+created: 2025-10-02
+modified: 2025-10-02
+published: false
+---
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -58,7 +65,7 @@ The migration happens in two phases:
 
 **Regex Patterns** (defined in `PATTERNS` object at top of script):
 - `hexId`: Matches 32-character hexadecimal Notion IDs
-- `mdLink`: Matches markdown links `[text](file.md)`
+- `mdLink`: Matches markdown links `[[file|text]]`
 - `frontmatter`: Detects existing frontmatter
 - `notionIdExtract`: Extracts Notion ID from filename
 
