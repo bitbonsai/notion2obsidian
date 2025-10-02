@@ -57,7 +57,7 @@ function showHelp() {
 ${chalk.cyan.bold('Notion Export Migration Tool')}
 
 ${chalk.yellow('Usage:')}
-  ./migrate-notion-optimized.js [directory] [options]
+  notion2obsidian [directory] [options]
 
 ${chalk.yellow('Options:')}
   -d, --dry-run       Preview changes without modifying files
@@ -66,9 +66,9 @@ ${chalk.yellow('Options:')}
   -h, --help          Show this help message
 
 ${chalk.yellow('Examples:')}
-  ./migrate-notion-optimized.js ./my-notion-export
-  ./migrate-notion-optimized.js ./my-notion-export --dry-run
-  ./migrate-notion-optimized.js --verbose
+  notion2obsidian ./my-notion-export
+  notion2obsidian ./my-notion-export --dry-run
+  notion2obsidian --verbose
 
 ${chalk.cyan('Documentation:')}
   This tool migrates Notion exports to Obsidian-compatible format by:
