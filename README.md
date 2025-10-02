@@ -1,41 +1,34 @@
----
-title: "README"
-created: 2025-10-02
-modified: 2025-10-02
-published: false
----
+# Notion to Obsidian Migration Tool
 
-# Notion to Obsidian Migration Tool (Optimized)
-
-A high-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format with beautiful progress bars and comprehensive error handling.
+A high-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format. Fast, clean, and simple.
 
 ## ✨ Features
 
 - **🚀 Performance Optimized**: Batch processing with concurrent file operations
-- **🎨 Beautiful UI**: Chalk-powered colors and cli-progress bars
-- **🔍 Dry Run Mode**: Preview changes before applying them
-- **🛡️ Safe**: Automatic backup creation (optional)
-- **📊 Progress Tracking**: Real-time progress bars for all operations
+- **📦 Direct Zip Support**: Extract and migrate zip files in one command
+- **🔍 Dry Run Mode**: Preview changes before applying them (with sampling for large zips)
 - **🔗 Smart Link Conversion**: Converts markdown links to Obsidian wiki links
 - **🏷️ Auto-tagging**: Generates tags from folder structure
-- **📝 Frontmatter Generation**: Adds rich YAML metadata to all files
+- **📝 Frontmatter Generation**: Adds YAML metadata to all files
 - **🔄 Duplicate Handling**: Intelligently disambiguates files with same names
 - **⚡ Batch Processing**: Processes files in chunks for optimal performance
+- **🎯 Clean Output**: No unnecessary progress bars or backups
 
 ## 📋 What It Does
 
 1. **Cleans filenames**: Removes 32-character Notion IDs from files and directories
 2. **Adds frontmatter**: Generates YAML metadata including:
-   - Title, creation/modification dates
+   - Title
    - Tags derived from folder structure
    - Aliases (preserves original filenames)
    - Notion IDs for reference
    - Folder paths for duplicate disambiguation
    - Inline metadata (Status, Owner, Dates, Priority, Completion, Summary)
-3. **Converts links**: Transforms `[[file|text]]` → `[[file]]` or `[[file|alias]]`
+3. **Converts links**: Transforms `[text](file.md)` → `[[file|text]]`
 4. **Handles anchors**: Preserves section links like `[text](file.md#section)` → `[[file#section|text]]`
 5. **Processes duplicates**: Uses folder context to handle files with identical names
 6. **Renames files and directories**: Strips Notion IDs from all names
+7. **Updates asset paths**: Fixes image and file references after directory renaming
 
 ## 🚀 Installation
 
@@ -44,7 +37,7 @@ A high-performance CLI tool to migrate Notion exports to Obsidian-compatible mar
 bun install
 
 # Make script executable
-chmod +x migrate-notion-optimized.js
+chmod +x notion2obsidian.js
 ```
 
 ## 📖 Usage
@@ -52,21 +45,21 @@ chmod +x migrate-notion-optimized.js
 ### Basic Usage
 
 ```bash
+# Run on a zip file (recommended)
+./notion2obsidian.js ./Export-abc123.zip
+
+# Run on a directory
+./notion2obsidian.js ./my-notion-export
+
 # Run on current directory
-./migrate-notion-optimized.js
-
-# Run on specific directory
-./migrate-notion-optimized.js ./my-notion-export
-
-# Use bun directly
-bun run migrate-notion-optimized.js ./my-notion-export
+./notion2obsidian.js
 ```
 
 ### Command Line Options
 
 ```bash
 -d, --dry-run       # Preview changes without modifying files
---skip-backup       # Skip creating backup files (faster but risky)
+                    # (extracts 10% sample or 10MB max for zip files)
 -v, --verbose       # Show detailed processing information
 -h, --help          # Show help message
 ```
@@ -74,50 +67,68 @@ bun run migrate-notion-optimized.js ./my-notion-export
 ### Examples
 
 ```bash
-# Preview changes without modifying anything
-./migrate-notion-optimized.js ./my-export --dry-run
+# Preview changes from a zip file
+./notion2obsidian.js ./Export-abc123.zip --dry-run
 
-# Run migration with all safety features
-./migrate-notion-optimized.js ./my-export
+# Run full migration on zip file
+./notion2obsidian.js ./Export-abc123.zip
 
-# Fast migration without backups (use with caution!)
-./migrate-notion-optimized.js ./my-export --skip-backup
+# Preview changes on extracted directory
+./notion2obsidian.js ./my-export --dry-run
 
-# Verbose mode for debugging
-./migrate-notion-optimized.js ./my-export --verbose
+# Run migration on directory
+./notion2obsidian.js ./my-export
 
 # Using npm scripts
-bun run dry-run ./my-export
+bun run dry-run ./Export-abc123.zip
 bun run migrate ./my-export
 ```
+
+## 📦 Zip File Support
+
+The tool can directly process Notion zip exports:
+
+- **Automatic extraction**: Extracts to `Export-2d6f-extracted/` (uses first 4 chars of hash for short names)
+- **Smart sampling**: Dry-run mode extracts only 10% or 10MB for quick preview
+- **Single directory detection**: Automatically uses subdirectory if zip contains only one folder
+- **Cleanup guidance**: Shows extracted location and removal command after completion
 
 ## 📊 Sample Output
 
 ```
-🔍 Notion Export Migration Tool (Optimized)
-Directory: ./my-notion-export
+📦 Extracting zip file...
+Extracting to: Export-2d6f-extracted
+Sample mode: extracting up to 10% or 10MB for preview
+
+✓ Extracted 12 of 2088 files (1% sample)
+
+Using subdirectory: Export-abc123...
+
+📦 Notion to Obsidian
+Directory: Export-2d6f-extracted/Export-abc123...
+Mode: DRY RUN (no changes will be made)
 
 Phase 1: Analyzing files and building migration map...
 
-Scanning |████████████████████| 100% | 100/100 files
 Found 542 markdown files
 Found 23 directories
 
 ⚠ Warning: 5 duplicate filenames found
 These will be disambiguated using folder paths in frontmatter.
 
-Analyzing |████████████████████| 100% | 542/542 files
-
 ═══ MIGRATION PREVIEW ═══
 
 Files to rename: 542
 
-Sample files (first 3):
+Sample:
   − My Note abc123def456...xyz.md
   + My Note.md
 
-  − Another Document 789012345...678.md
-  + Another Document.md
+Directories to rename: 23
+
+Sample:
+  − Project Folder abc123...
+  + Project Folder
 
 Sample frontmatter:
 
@@ -125,54 +136,55 @@ For file: My Note.md
 
 ---
 title: "My Note"
-created: 2024-01-15
-modified: 2024-10-01
 tags: [projects, work]
 aliases:
   - "My Note abc123def456...xyz"
 notion-id: "abc123def456789012345678901234567"
+folder: "Work/Projects"
 published: false
 ---
 
 ═══ SUMMARY ═══
-  • Add frontmatter to 542 files
-  • Convert ~1247 markdown links to wiki links
-  • Handle 5 duplicate filenames with folder context
-  • Rename 542 files
-  • Rename 23 directories
+  📄 Add frontmatter to 542 files
+  🔗 Convert ~1247 markdown links to wiki links
+  📋 Handle 5 duplicate filenames with folder context
+  ✏️  Rename 542 files
+  📁 Rename 23 directories
 
 Press ENTER to proceed with the migration, or Ctrl+C to cancel...
 
 Phase 2: Executing migration...
 
 Step 1: Adding frontmatter and converting links...
-Processing |████████████████████| 100% | 542/542 files
   ✓ Processed 542 files, converted 1247 links
 
 Step 2: Renaming files...
-Renaming |████████████████████| 100% | 542/542 files
   ✓ Renamed 542 files
 
 Step 3: Renaming directories...
-Renaming |████████████████████| 100% | 23/23 directories
   ✓ Renamed 23 directories
 
 ✅ Migration complete!
 
 Summary:
-   • Added frontmatter to 542 files
-   • Converted 1247 markdown links to wiki links
-   • Renamed 542 files
-   • Renamed 23 directories
+   📄 Added frontmatter to 542 files
+   🔗 Converted 1247 markdown links to wiki links
+   ✏️  Renamed 542 files
+   📁 Renamed 23 directories
 
 Notes:
    • Duplicate filenames preserved with folder context
    • Original filenames stored as aliases
    • URL-encoded links converted to wiki links
-   • Backup files created (.backup extension)
 
 🎉 Your Notion export is now ready for Obsidian!
-Open Obsidian and select: ./my-notion-export
+Open directory: my-export
+
+📁 Extracted Directory:
+   Export-2d6f-extracted
+
+   You can now open this directory in Obsidian.
+   To remove the extracted files, run: rm -rf "Export-2d6f-extracted"
 ```
 
 ## 🏗️ Architecture & Optimizations
@@ -184,25 +196,32 @@ Open Obsidian and select: ./my-notion-export
 3. **Optimized Regex**: Pre-compiled patterns for better performance
 4. **Efficient Data Structures**: Uses `Map` for O(1) lookups in file resolution
 5. **Smart Sampling**: Estimates link counts from a sample to avoid processing all files twice
+6. **Fast Extraction**: Uses `fflate` for high-performance zip extraction
 
-### Key Optimizations from Original
+### Key Features
 
-| Aspect | Original | Optimized |
-|--------|----------|-----------|
-| File reads | 2x per file | 1x per file |
-| Processing | Sequential | Batched (50 at a time) |
-| Link count | Hardcoded | Calculated dynamically |
-| Progress feedback | Console logs | Progress bars |
-| Error handling | Basic | Comprehensive |
-| Safety features | None | Backups + dry-run |
+| Feature | Implementation |
+|---------|---------------|
+| File reads | 1x per file (optimized) |
+| Processing | Batched (50 at a time) |
+| Link count | Calculated dynamically |
+| Zip extraction | Direct support with fflate |
+| Output | Clean, minimal |
+| Safety | Dry-run mode |
 
 ## 📁 File Structure
 
 ```
 .
-├── migrate-notion-optimized.js   # Main migration script
+├── notion2obsidian.js            # Main migration script (executable)
+├── notion2obsidian.test.js       # Test suite
 ├── package.json                  # Dependencies and scripts
-└── README.md                     # This file
+├── README.md                     # This file
+└── docs/                         # Additional documentation
+    ├── ARCHITECTURE.md
+    ├── EXAMPLES.md
+    ├── GETTING_STARTED.md
+    └── QUICK_REFERENCE.md
 ```
 
 ## 🔧 Configuration
@@ -223,7 +242,7 @@ Customize regex patterns at the top of the script:
 const PATTERNS = {
   hexId: /^[0-9a-fA-F]{32}$/,
   mdLink: /\[([^\]]+)\]\(([^)]+\.md)\)/g,
-  frontmatter: /^---\n/,
+  frontmatter: /^\uFEFF?\s*---\s*\n/,  // Handle BOM and whitespace
   notionIdExtract: /\s([0-9a-fA-F]{32})(?:\.[^.]+)?$/
 };
 ```
@@ -234,7 +253,7 @@ const PATTERNS = {
 
 ```bash
 # Make script executable
-chmod +x migrate-notion-optimized.js
+chmod +x notion2obsidian.js
 ```
 
 ### Memory Issues (Large Exports)
@@ -245,22 +264,13 @@ If processing 10,000+ files, reduce batch size:
 const BATCH_SIZE = 25; // Reduce from 50 to 25
 ```
 
-### Backup Files Taking Too Much Space
-
-```bash
-# Skip backups (use with caution!)
-./migrate-notion-optimized.js ./my-export --skip-backup
-
-# Or manually delete backups after successful migration
-find ./my-export -name "*.backup" -delete
-```
-
 ### Link Conversion Issues
 
 Check the error summary at the end of migration. Common issues:
-- Relative path links (`../other/file.md`) - now supported!
+- Relative path links (`../other/file.md`) - fully supported!
 - External links - correctly skipped
 - Image links - correctly preserved
+- Asset paths - automatically updated when directories are renamed
 
 ## 📝 Before & After Examples
 
@@ -282,13 +292,13 @@ Meeting Notes.md
 
 **Before:**
 ```markdown
-Check out [[My Other Note abc123def|this document]]
+Check out [this document](My%20Other%20Note%20abc123def.md)
 See [Section 2](Another%20Doc%20xyz789.md#section-2)
 ```
 
 **After:**
 ```markdown
-Check out [[My Other Note]]
+Check out [[My Other Note|this document]]
 See [[Another Doc#section-2|Section 2]]
 ```
 
@@ -305,8 +315,6 @@ This is the content...
 ```markdown
 ---
 title: "My Note"
-created: 2024-01-15
-modified: 2024-10-01
 tags: [projects, documentation]
 aliases:
   - "My Note abc123def456789012345678901234567"
@@ -320,29 +328,23 @@ published: false
 This is the content...
 ```
 
-## 🔒 Safety Features
-
-1. **Dry Run Mode**: Test migration without changes
-2. **Automatic Backups**: Creates `.backup` files before modification
-3. **Error Logging**: Tracks all errors with file paths
-4. **Duplicate Detection**: Warns about potential conflicts
-5. **Confirmation Prompt**: Requires user confirmation before proceeding
-
 ## 🚦 Workflow Recommendation
 
 ```bash
-# 1. Always start with a dry run
-./migrate-notion-optimized.js ./my-export --dry-run
+# 1. Always start with a dry run (fast preview with sampling)
+./notion2obsidian.js ./Export-abc123.zip --dry-run
 
 # 2. Review the preview carefully
 
 # 3. Run the actual migration
-./migrate-notion-optimized.js ./my-export
+./notion2obsidian.js ./Export-abc123.zip
 
-# 4. Test in Obsidian
+# 4. Open the extracted directory in Obsidian
 
-# 5. If satisfied, clean up backups
-find ./my-export -name "*.backup" -delete
+# 5. Test your vault
+
+# 6. If satisfied, optionally remove extracted files
+rm -rf Export-2d6f-extracted
 ```
 
 ## 📚 Technical Details
@@ -368,14 +370,40 @@ Tags automatically generated from folder structure:
 - Special characters normalized to hyphens
 - Duplicate tags removed
 
+### Zip Extraction
+
+- Uses `fflate` for pure JavaScript extraction (no system dependencies)
+- Filters out macOS metadata (`__MACOSX`, hidden files)
+- Preserves directory structure
+- Shortens extracted directory names for convenience
+
+## 🔒 Safety Features
+
+1. **Dry Run Mode**: Test migration without changes (with smart sampling for zips)
+2. **Error Tracking**: Tracks all errors with file paths
+3. **Duplicate Detection**: Warns about potential conflicts
+4. **Confirmation Prompt**: Requires user confirmation before proceeding
+5. **Naming Conflict Resolution**: Automatically handles file/directory name collisions
+6. **Symlink Protection**: Detects and skips symbolic links
+7. **Write Permission Check**: Validates access before starting
+
+## 🧪 Testing
+
+```bash
+# Run test suite
+bun test
+
+# Watch mode
+bun test --watch
+```
+
 ## 🤝 Contributing
 
 Suggestions for improvements:
-1. Add undo/rollback functionality
-2. Support for custom frontmatter templates
-3. Parallel processing with worker threads
-4. Interactive mode for resolving conflicts
-5. Support for other export formats
+1. Support for custom frontmatter templates
+2. Interactive mode for resolving conflicts
+3. Support for other export formats
+4. Plugin system for custom transformations
 
 ## 📄 License
 
@@ -386,7 +414,7 @@ MIT
 Built with:
 - [Bun](https://bun.sh) - Fast JavaScript runtime
 - [Chalk](https://github.com/chalk/chalk) - Terminal styling
-- [cli-progress](https://github.com/npkgz/cli-progress) - Progress bars
+- [fflate](https://github.com/101arrowz/fflate) - High-performance zip extraction
 
 ## 🔗 Related Tools
 

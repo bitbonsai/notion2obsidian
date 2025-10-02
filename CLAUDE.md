@@ -33,8 +33,7 @@ bun run dry-run ./my-export
 ```
 
 ### Command line options
-- `-d, --dry-run` - Preview changes without modifying files
-- `--skip-backup` - Skip creating backup files (faster but risky)
+- `-d, --dry-run` - Preview changes without modifying files (extracts 10% sample or 10MB max for zip files)
 - `-v, --verbose` - Show detailed processing information
 - `-h, --help` - Show help message
 
@@ -60,16 +59,17 @@ bun install
 The migration happens in two phases:
 
 **Phase 0: Zip Extraction (if needed)**
-- Detects `.zip` files and extracts to same directory as zip (creates `{zipname}-extracted/` folder)
+- Detects `.zip` files and extracts to same directory as zip
+- Creates shortened directory names: `Export-2d6f-extracted/` (first 4 chars of hash instead of full UUID)
 - Uses pure JS `fflate` library for reliable extraction (handles special characters)
 - Filters out macOS metadata files (`__MACOSX`, hidden files)
 - Automatically identifies single top-level directory after extraction
-- Prompts user to keep or delete extracted files after migration
+- Shows extracted directory location and `rm -rf` command for cleanup after migration
 
 **Phase 1: Analysis & Planning**
 1. Scans directory for all `.md` files and directories using `Glob`
 2. Builds a file map for link resolution (handles URL-encoded names)
-3. Extracts metadata (dates, Notion IDs, folder structure)
+3. Extracts metadata (Notion IDs, folder structure, tags)
 4. Detects duplicate filenames across different folders
 5. Generates preview of changes with estimated link conversion count (samples 10 files)
 
@@ -110,20 +110,21 @@ The `convertMarkdownLinkToWiki()` function handles:
 ### Frontmatter Generation
 
 Generated frontmatter includes:
-- Standard metadata: `title`, `created`, `modified`, `tags`, `aliases`, `notion-id`
+- Standard metadata: `title`, `tags`, `aliases`, `notion-id`
 - Folder path for duplicate disambiguation
 - Inline metadata extracted from content: `status`, `owner`, `dates`, `priority`, `completion`, `summary`
 - Always sets `published: false`
+
+**Note**: Created/modified dates are NOT included as they're meaningless for Notion exports (zip timestamps reflect export time, not document creation).
 
 Tags are auto-generated from folder structure (normalized to lowercase with hyphens).
 
 ### Safety Features
 
-- **Backups**: Creates `.backup` files before modification (unless `--skip-backup` is used)
-- **Dry run mode**: Preview all changes without applying them
+- **Dry run mode**: Preview all changes without applying them (with smart sampling for zip files)
 - **User confirmation**: Requires ENTER keypress before proceeding with actual migration
 - **Error tracking**: `MigrationStats` class tracks all errors with file paths
-- **Progress bars**: Real-time progress feedback using `cli-progress`
+- **Clean output**: Minimal, focused output without unnecessary progress bars
 
 ### File Structure
 
@@ -131,7 +132,7 @@ Tags are auto-generated from folder structure (normalized to lowercase with hyph
 .
 ├── notion2obsidian.js            # Main migration script (executable)
 ├── notion2obsidian.test.js       # Test suite (uses Bun test runner)
-├── package.json                  # Dependencies: chalk, cli-progress
+├── package.json                  # Dependencies: chalk, fflate
 ├── README.md                     # User documentation
 └── docs/                         # Additional documentation
     ├── ARCHITECTURE.md
@@ -159,7 +160,6 @@ The tool uses a mix of Bun native APIs and Node.js compatibility:
 
 **Third-party Dependencies:**
 - **chalk** - Terminal colors and formatting
-- **cli-progress** - Progress bars for long operations
 - **fflate** - Pure JS zip extraction (handles special characters, no system dependencies)
 
 ### Key Implementation Details
@@ -167,16 +167,15 @@ The tool uses a mix of Bun native APIs and Node.js compatibility:
 - **File map**: Stores both original and URL-encoded names for link resolution
 - **Link counting**: Estimated by sampling first 10 files to avoid double-processing
 - **Zip handling**: Uses `fflate` library for pure JS extraction (no system dependencies)
-- **Extraction location**: Extracts to `{zipname}-extracted/` in same directory as zip file
+- **Extraction location**: Extracts to shortened directory name (e.g., `Export-2d6f-extracted/`) in same directory as zip file
 - **macOS metadata filtering**: Automatically skips `__MACOSX` and hidden files during extraction
 - **Windows compatibility**: Sanitizes filenames by replacing forbidden characters with hyphens, uses `sep` for path splitting
-- **Empty file handling**: Skips completely empty files during processing (no backup created)
-- **Backup file exclusion**: `.backup` files from previous runs are excluded from processing
+- **Empty file handling**: Skips completely empty files during processing
 - **Frontmatter detection**: Handles BOM (Byte Order Mark) and whitespace variations
 - **Quote escaping**: All YAML frontmatter values are properly escaped
+- **No backups**: Files are modified directly (use git or dry-run for safety)
 
 ### Robustness Features
-- **Backup versioning**: Creates versioned backups (`.backup`, `.backup.1`, `.backup.2`) to prevent overwriting existing backups
 - **Rename collision detection**: If target filename exists, appends counter (e.g., `Document-1.md`, `Document-2.md`)
 - **Symlink protection**: Detects and skips symbolic links to prevent infinite loops in directory traversal
 - **Circular reference detection**: Uses `realpath()` and visited set to detect circular directory references
