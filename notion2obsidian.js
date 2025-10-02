@@ -463,17 +463,39 @@ async function extractZipToTemp(zipPath) {
   await mkdir(tempDir, { recursive: true });
 
   console.log(chalk.cyan('📦 Extracting zip file...'));
-  console.log(chalk.gray(`Extracting to: ${tempDir}\n`));
+  console.log(chalk.gray(`Extracting to: ${tempDir}`));
+  console.log(chalk.yellow('This may take a while for large files...\n'));
 
   try {
-    // Use system unzip command for extraction
+    // Use system unzip command for extraction with progress
+    let lastOutput = Date.now();
     await new Promise((resolve, reject) => {
-      const proc = spawn('unzip', ['-q', zipPath, '-d', tempDir]);
+      const proc = spawn('unzip', [zipPath, '-d', tempDir]);
+
+      // Show periodic progress indicator
+      const progressInterval = setInterval(() => {
+        process.stdout.write(chalk.gray('.'));
+      }, 1000);
+
+      proc.stdout.on('data', (data) => {
+        lastOutput = Date.now();
+      });
+
+      proc.stderr.on('data', (data) => {
+        lastOutput = Date.now();
+      });
+
       proc.on('close', (code) => {
+        clearInterval(progressInterval);
+        process.stdout.write('\n');
         if (code === 0) resolve();
         else reject(new Error(`unzip failed with code ${code}`));
       });
-      proc.on('error', reject);
+
+      proc.on('error', (err) => {
+        clearInterval(progressInterval);
+        reject(err);
+      });
     });
 
     console.log(chalk.green('✓ Extraction complete\n'));
