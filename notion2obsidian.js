@@ -1,8 +1,11 @@
 #!/usr/bin/env bun
 
 import { Glob } from "bun";
-import { stat, readdir, rename, copyFile } from "fs/promises";
+import { stat, readdir, rename, copyFile, mkdir, rm } from "fs/promises";
 import { join, dirname, basename, extname, relative } from "path";
+import { tmpdir } from "os";
+import { spawn } from "child_process";
+import { promisify } from "util";
 import chalk from "chalk";
 import cliProgress from "cli-progress";
 
@@ -70,7 +73,7 @@ function showHelp() {
 ${chalk.cyan.bold('Notion to Obsidian')}
 
 ${chalk.yellow('Usage:')}
-  notion2obsidian [directory] [options]
+  notion2obsidian [directory|zip-file] [options]
 
 ${chalk.yellow('Options:')}
   -d, --dry-run       Preview changes without modifying files
@@ -80,15 +83,16 @@ ${chalk.yellow('Options:')}
 
 ${chalk.yellow('Examples:')}
   notion2obsidian ./my-notion-export
-  notion2obsidian ./my-notion-export --dry-run
+  notion2obsidian ./Export-abc123.zip
+  notion2obsidian ./my-export --dry-run
   notion2obsidian --verbose
 
-${chalk.cyan('Documentation:')}
-  This tool migrates Notion exports to Obsidian-compatible format by:
-  • Removing Notion IDs from filenames and directories
-  • Adding YAML frontmatter with metadata
-  • Converting markdown links to wiki links
-  • Handling duplicate filenames with folder context
+${chalk.cyan('Features:')}
+  • Accepts zip files directly (extracts to temp directory)
+  • Removes Notion IDs from filenames and directories
+  • Adds YAML frontmatter with metadata
+  • Converts markdown links to wiki links
+  • Handles duplicate filenames with folder context
 `);
 }
 
@@ -447,6 +451,60 @@ class MigrationStats {
 }
 
 // ============================================================================
+// Zip Extraction
+// ============================================================================
+
+async function extractZipToTemp(zipPath) {
+  // Create temp directory
+  const tempDirBase = join(tmpdir(), 'notion2obsidian');
+  const tempId = Date.now().toString(36) + Math.random().toString(36).substring(2);
+  const tempDir = join(tempDirBase, tempId);
+
+  await mkdir(tempDir, { recursive: true });
+
+  console.log(chalk.cyan('📦 Extracting zip file...'));
+  console.log(chalk.gray(`Extracting to: ${tempDir}\n`));
+
+  try {
+    // Use system unzip command for extraction
+    await new Promise((resolve, reject) => {
+      const proc = spawn('unzip', ['-q', zipPath, '-d', tempDir]);
+      proc.on('close', (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`unzip failed with code ${code}`));
+      });
+      proc.on('error', reject);
+    });
+
+    console.log(chalk.green('✓ Extraction complete\n'));
+    return tempDir;
+  } catch (err) {
+    // Clean up on error
+    await rm(tempDir, { recursive: true, force: true });
+    throw err;
+  }
+}
+
+async function cleanupTempDirectory(tempDir) {
+  console.log(chalk.yellow('\nKeep extracted files? (y/N): '));
+
+  const reader = Bun.stdin.stream().getReader();
+  const { value } = await reader.read();
+  reader.releaseLock();
+
+  const response = new TextDecoder().decode(value).trim().toLowerCase();
+
+  if (response === 'y' || response === 'yes') {
+    console.log(chalk.green(`\n✓ Files kept at: ${chalk.blue(tempDir)}`));
+    console.log(chalk.gray('You can now open this directory in Obsidian.\n'));
+  } else {
+    console.log(chalk.gray('\nCleaning up temporary files...'));
+    await rm(tempDir, { recursive: true, force: true });
+    console.log(chalk.green('✓ Temporary files removed\n'));
+  }
+}
+
+// ============================================================================
 // User Confirmation
 // ============================================================================
 
@@ -470,26 +528,49 @@ async function promptForConfirmation(dryRun) {
 async function main() {
   const config = parseArgs();
   const stats = new MigrationStats();
+  let extractedTempDir = null;
 
-  // Check if directory exists
-  try {
-    await stat(config.targetDir);
-  } catch {
-    console.log(chalk.red(`Error: Directory ${config.targetDir} does not exist`));
-    process.exit(1);
-  }
+  // Check if input is a zip file
+  const isZipFile = config.targetDir.toLowerCase().endsWith('.zip');
 
-  // Confirm if using current directory without explicit argument
-  if (!config.dirExplicitlyProvided) {
-    const cwd = process.cwd();
-    console.log(chalk.yellow('⚠ No directory specified. This will run on the current directory:'));
-    console.log(chalk.blue(`  ${cwd}\n`));
-    console.log(chalk.yellow('Press ENTER to continue, or Ctrl+C to cancel...'));
+  if (isZipFile) {
+    // Check if zip file exists
+    try {
+      await stat(config.targetDir);
+    } catch {
+      console.log(chalk.red(`Error: Zip file ${config.targetDir} does not exist`));
+      process.exit(1);
+    }
 
-    const reader = Bun.stdin.stream().getReader();
-    await reader.read();
-    reader.releaseLock();
-    console.log();
+    // Extract zip to temp directory
+    try {
+      extractedTempDir = await extractZipToTemp(config.targetDir);
+      config.targetDir = extractedTempDir;
+    } catch (err) {
+      console.log(chalk.red(`Error extracting zip file: ${err.message}`));
+      process.exit(1);
+    }
+  } else {
+    // Check if directory exists
+    try {
+      await stat(config.targetDir);
+    } catch {
+      console.log(chalk.red(`Error: Directory ${config.targetDir} does not exist`));
+      process.exit(1);
+    }
+
+    // Confirm if using current directory without explicit argument
+    if (!config.dirExplicitlyProvided) {
+      const cwd = process.cwd();
+      console.log(chalk.yellow('⚠ No directory specified. This will run on the current directory:'));
+      console.log(chalk.blue(`  ${cwd}\n`));
+      console.log(chalk.yellow('Press ENTER to continue, or Ctrl+C to cancel...'));
+
+      const reader = Bun.stdin.stream().getReader();
+      await reader.read();
+      reader.releaseLock();
+      console.log();
+    }
   }
 
   console.log(chalk.cyan.bold('📦 Notion to Obsidian'));
@@ -717,6 +798,12 @@ async function main() {
   if (config.dryRun) {
     console.log(chalk.green.bold('\n✅ Dry run complete! No changes were made.'));
     console.log(chalk.gray('Run without --dry-run to apply changes.'));
+
+    // Handle temp directory cleanup if zip was extracted
+    if (extractedTempDir) {
+      await rm(extractedTempDir, { recursive: true, force: true });
+      console.log(chalk.gray('\nTemporary extracted files removed.'));
+    }
     return;
   }
   
@@ -839,6 +926,11 @@ async function main() {
   
   console.log(chalk.cyan.bold('\n🎉 Your Notion export is now ready for Obsidian!'));
   console.log(`Open Obsidian and select: ${chalk.blue(config.targetDir)}`);
+
+  // Handle temp directory cleanup if zip was extracted
+  if (extractedTempDir) {
+    await cleanupTempDirectory(extractedTempDir);
+  }
 }
 
 main().catch(err => {
