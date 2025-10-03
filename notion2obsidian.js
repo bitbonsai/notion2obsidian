@@ -1037,11 +1037,54 @@ async function main() {
         file.oldPath = newMdPath;
         file.newPath = newMdPath; // Already at final name
 
-        // Update image paths in the file to be relative (just filenames)
-        const content = await Bun.file(newMdPath).text();
-        const cleanedFolderName = basename(file.newName, '.md'); // Cleaned name without Notion ID
+        // Normalize and rename image files in the attachment folder
+        const { readdir } = await import('node:fs/promises');
+        const filesInFolder = await readdir(potentialAttachmentFolder);
 
-        const updatedContent = content.replace(
+        // Common image extensions
+        const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico'];
+
+        // Build map of normalized name → original name for images
+        const imageMap = new Map();
+
+        for (const fileName of filesInFolder) {
+          const ext = extname(fileName).toLowerCase();
+          if (imageExtensions.includes(ext)) {
+            // Normalize: spaces → hyphens, lowercase
+            const nameWithoutExt = basename(fileName, extname(fileName));
+            const normalizedName = nameWithoutExt
+              .replace(/\s+/g, '-')
+              .toLowerCase() + ext;
+
+            // Only rename if needed
+            if (fileName !== normalizedName) {
+              const originalPath = join(potentialAttachmentFolder, fileName);
+              const normalizedPath = join(potentialAttachmentFolder, normalizedName);
+
+              // Check if normalized path already exists
+              if (await stat(normalizedPath).catch(() => false)) {
+                // Add counter to avoid collision
+                let counter = 1;
+                let altName = `${basename(normalizedName, ext)}-${counter}${ext}`;
+                while (await stat(join(potentialAttachmentFolder, altName)).catch(() => false)) {
+                  counter++;
+                  altName = `${basename(normalizedName, ext)}-${counter}${ext}`;
+                }
+                await rename(originalPath, join(potentialAttachmentFolder, altName));
+                imageMap.set(fileName, altName);
+              } else {
+                await rename(originalPath, normalizedPath);
+                imageMap.set(fileName, normalizedName);
+              }
+            }
+          }
+        }
+
+        // Update image references in the MD file
+        let content = await Bun.file(newMdPath).text();
+
+        // Replace image references
+        content = content.replace(
           /(!?\[[^\]]*\]\()([^)]+)(\))/g,
           (match, prefix, path, suffix) => {
             // Skip external URLs
@@ -1052,25 +1095,32 @@ async function main() {
             if (match.startsWith('[[')) {
               return match;
             }
-            // Decode URL-encoded paths
-            const decodedPath = decodeURIComponent(path);
 
-            // If path contains the folder name (either with or without Notion ID), extract just the filename
-            const pathParts = decodedPath.split('/');
-            if (pathParts.length > 1) {
-              const folderInPath = pathParts[pathParts.length - 2];
-              // Check if it matches either the original name with ID or the cleaned name
-              if (folderInPath === mdFileBase || folderInPath === cleanedFolderName) {
-                // This is an attachment in our folder, use just the filename
-                return `${prefix}${pathParts[pathParts.length - 1]}${suffix}`;
-              }
+            // Decode URL-encoded paths and get just the filename
+            const decodedPath = decodeURIComponent(path);
+            const fileName = basename(decodedPath);
+
+            // Check if this image was renamed
+            if (imageMap.has(fileName)) {
+              return `${prefix}${imageMap.get(fileName)}${suffix}`;
+            }
+
+            // Otherwise, check if it's an image in our folder - just use the filename
+            const ext = extname(fileName).toLowerCase();
+            if (imageExtensions.includes(ext)) {
+              // Normalize the filename reference
+              const nameWithoutExt = basename(fileName, extname(fileName));
+              const normalizedFileName = nameWithoutExt
+                .replace(/\s+/g, '-')
+                .toLowerCase() + ext;
+              return `${prefix}${normalizedFileName}${suffix}`;
             }
 
             return match;
           }
         );
 
-        await Bun.write(newMdPath, updatedContent);
+        await Bun.write(newMdPath, content);
       }
     } catch (err) {
       stats.addNamingConflict(file.oldPath, `Error organizing attachments: ${err.message}`);
