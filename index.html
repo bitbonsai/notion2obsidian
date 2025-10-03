@@ -298,6 +298,18 @@ published: false
                         </div>
                     </div>
                 </div>
+                <div class="process-item">
+                    <div class="process-icon">📦</div>
+                    <div class="process-content">
+                        <h3>Organizes attachments</h3>
+                        <p>Moves markdown files into their attachment folders and simplifies image paths</p>
+                        <div class="example">
+                            <div class="example-before">![Image](My%20Doc%202d6fa1e5/img.png)</div>
+                            <div class="example-arrow">→</div>
+                            <div class="example-after">![Image](img.png)</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -444,11 +456,19 @@ folder: "Personal/Notes"
                 </div>
                 <div class="faq-item">
                     <h3><span class="faq-icon">?</span> What about images and attachments?</h3>
-                    <p>All images, PDFs, and other attachments are preserved. Attachment folders get cleaned up too:</p>
+                    <p>All images, PDFs, and other attachments are preserved and organized. Files with attachments are moved into their attachment folders for better organization:</p>
                     <div class="example" style="margin-top: 1rem;">
-                        <div class="example-before">My Document 2d6fa1e5/image.png</div>
-                        <div class="example-arrow">→</div>
-                        <div class="example-after">My Document/image.png</div>
+                        <div style="margin-bottom: 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Before:</strong></div>
+                        <pre style="color: #ff6b6b;">My Document.md
+My Document 2d6fa1e5/
+  image1.png
+  image2.png</pre>
+                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>After:</strong></div>
+                        <pre style="color: var(--color-success);">My Document/
+  My Document.md  ← moved inside
+  image1.png
+  image2.png</pre>
+                        <div style="margin-top: 1rem; color: var(--color-text-dim); font-size: 0.85rem;">Image paths simplified from <code>My%20Document/image.png</code> to just <code>image.png</code></div>
                     </div>
                 </div>
                 <div class="faq-item">
