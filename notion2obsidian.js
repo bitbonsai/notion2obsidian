@@ -694,6 +694,7 @@ async function promptForConfirmation(dryRun) {
 // ============================================================================
 
 async function main() {
+  const { Glob } = await import('bun');
   const config = parseArgs();
   const stats = new MigrationStats();
   let extractedTempDir = null;
@@ -1171,7 +1172,6 @@ async function main() {
 
   // Get all directories
   const allDirs = [config.targetDir];
-  const { Glob } = await import('bun');
   const dirGlob = new Glob('**/', { onlyFiles: false });
   for (const dir of dirGlob.scanSync(config.targetDir)) {
     allDirs.push(join(config.targetDir, dir));
