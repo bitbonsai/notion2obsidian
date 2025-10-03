@@ -4,12 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!-- Performance: DNS Prefetch & Preconnect -->
+    <link rel="dns-prefetch" href="https://img.shields.io">
+    <link rel="dns-prefetch" href="https://github.com">
+    <link rel="preconnect" href="https://img.shields.io" crossorigin>
+
+    <!-- Performance: Preload Critical Resources -->
+    <link rel="preload" href="style.css" as="style">
+    <link rel="preload" href="logo.svg" as="image">
+
     <!-- Primary Meta Tags -->
     <title>notion2obsidian - Fast Notion to Obsidian Migration</title>
     <meta name="title" content="notion2obsidian - Fast Notion to Obsidian Migration">
     <meta name="description" content="Fast Notion to Obsidian migration. Clean, simple, minimal dependencies. Migrate your entire workspace in seconds with this high-performance CLI tool.">
     <meta name="keywords" content="notion, obsidian, migration, markdown, cli, converter, notion2obsidian, export, notes">
     <meta name="author" content="bitbonsai">
+    <meta name="theme-color" content="#8250E7">
+    <link rel="canonical" href="https://bitbonsai.github.io/notion2obsidian/">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
@@ -17,6 +28,9 @@
     <meta property="og:title" content="notion2obsidian - Fast Notion to Obsidian Migration">
     <meta property="og:description" content="Fast Notion to Obsidian migration. Clean, simple, minimal dependencies. Migrate your entire workspace in seconds.">
     <meta property="og:image" content="https://bitbonsai.github.io/notion2obsidian/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:locale" content="en_US">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
@@ -25,10 +39,52 @@
     <meta property="twitter:description" content="Fast Notion to Obsidian migration. Clean, simple, minimal dependencies. Migrate your entire workspace in seconds.">
     <meta property="twitter:image" content="https://bitbonsai.github.io/notion2obsidian/og-image.jpg">
 
+    <!-- Icons -->
     <link rel="icon" type="image/svg+xml" href="logo.svg">
+    <link rel="apple-touch-icon" href="logo.svg">
+
+    <!-- Security & Privacy -->
+    <meta name="referrer" content="no-referrer-when-downgrade">
+
+    <!-- Accessibility -->
+    <meta name="color-scheme" content="dark light">
+
+    <!-- Stylesheet -->
     <link rel="stylesheet" href="style.css">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "notion2obsidian",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "macOS, Linux, Windows",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Fast Notion to Obsidian migration. Clean, simple, minimal dependencies.",
+      "softwareVersion": "2.2.1",
+      "author": {
+        "@type": "Person",
+        "name": "bitbonsai",
+        "url": "https://github.com/bitbonsai"
+      },
+      "url": "https://bitbonsai.github.io/notion2obsidian/",
+      "downloadUrl": "https://github.com/bitbonsai/notion2obsidian",
+      "screenshot": "https://bitbonsai.github.io/notion2obsidian/og-image.jpg",
+      "releaseNotes": "https://github.com/bitbonsai/notion2obsidian/blob/main/CHANGELOG.md"
+    }
+    </script>
 </head>
 <body>
+    <noscript>
+        <div style="padding: 2rem; text-align: center; background: rgba(255, 59, 48, 0.1); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3); border-radius: 0.5rem; margin: 2rem;">
+            JavaScript is required for copy-to-clipboard functionality. The rest of the page works without it.
+        </div>
+    </noscript>
     <a href="#install" class="skip-nav">Skip to main content</a>
     <div class="container">
         <!-- Hero Section -->
@@ -38,7 +94,7 @@
                     <div class="badge badge-version">version 2.2.1</div>
                     <div class="badge badge-free">FREE</div>
                 </div>
-                <img src="logo.svg" alt="notion2obsidian logo" class="hero-logo">
+                <img src="logo.svg" alt="notion2obsidian logo" class="hero-logo" width="80" height="80" loading="eager">
                 <h1 class="title">
                     <span class="gradient-text">notion2obsidian</span>
                 </h1>
@@ -140,24 +196,24 @@
         </header>
 
         <!-- Features Grid -->
-        <section class="features">
-            <h2 class="section-title">Why notion2obsidian?</h2>
+        <section class="features" aria-labelledby="features-heading">
+            <h2 id="features-heading" class="section-title">Why notion2obsidian?</h2>
             <div class="features-grid">
-                <div class="feature-card">
+                <article class="feature-card">
                     <div class="feature-icon">⚡</div>
                     <h3>Lightning Fast</h3>
                     <p>Migrate your entire workspace in under a minute. Batch processing with concurrent operations handles thousands of files effortlessly.</p>
-                </div>
-                <div class="feature-card">
+                </article>
+                <article class="feature-card">
                     <div class="feature-icon">📦</div>
                     <h3>Zero-Friction Setup</h3>
                     <p>Extract and migrate zip files in one command. Preview changes with dry-run mode. No manual extraction, no backups cluttering your workspace.</p>
-                </div>
-                <div class="feature-card">
+                </article>
+                <article class="feature-card">
                     <div class="feature-icon">🔗</div>
                     <h3>Perfect Migration</h3>
                     <p>Smart link conversion, auto-tagging from folders, frontmatter generation, and duplicate handling. Everything works in Obsidian from day one.</p>
-                </div>
+                </article>
             </div>
         </section>
 
@@ -310,9 +366,9 @@ published: false
                         </div>
                     </div>
                     <div class="install-command">
-                        <div class="info-box">
+                        <aside class="info-box" role="note">
                             💡 Download the .zip file to your computer
-                        </div>
+                        </aside>
                     </div>
                 </div>
 
@@ -343,9 +399,9 @@ published: false
                         </div>
                     </div>
                     <div class="install-command">
-                        <div class="info-box">
+                        <aside class="info-box" role="note">
                             📂 Open as vault → Browse → Select the extracted folder
-                        </div>
+                        </aside>
                     </div>
                 </div>
             </div>
@@ -401,7 +457,7 @@ folder: "Personal/Notes"
         <!-- Footer -->
         <footer class="footer">
             <div class="footer-content">
-                <p>Built with ❤️ by <a href="https://github.com/bitbonsai" class="author-link">bitbonsai</a></p>
+                <p>Built with ❤️ by <a href="https://github.com/bitbonsai" class="author-link" rel="me">bitbonsai</a></p>
                 <div class="footer-links">
                     <a href="https://github.com/bitbonsai/notion2obsidian">GitHub</a>
                     <span>•</span>
@@ -422,19 +478,33 @@ folder: "Personal/Notes"
     <a href="#" class="back-to-top" aria-label="Back to top">↑</a>
 
     <script>
-        // Copy to clipboard functionality
+        // Copy to clipboard functionality with fallback
         document.querySelectorAll('.copy-button').forEach(button => {
             button.addEventListener('click', async () => {
                 const codeBlock = button.parentElement;
                 const code = codeBlock.querySelector('code').textContent;
+                const copyIcon = button.querySelector('.copy-icon');
+                const checkIcon = button.querySelector('.check-icon');
 
                 try {
-                    await navigator.clipboard.writeText(code);
+                    // Modern clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(code);
+                    } else {
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = code;
+                        textArea.style.position = 'fixed';
+                        textArea.style.left = '-999999px';
+                        textArea.style.top = '-999999px';
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        document.execCommand('copy');
+                        textArea.remove();
+                    }
 
                     // Show checkmark
-                    const copyIcon = button.querySelector('.copy-icon');
-                    const checkIcon = button.querySelector('.check-icon');
-
                     copyIcon.style.display = 'none';
                     checkIcon.style.display = 'block';
                     button.classList.add('copied');
@@ -447,6 +517,11 @@ folder: "Personal/Notes"
                     }, 2000);
                 } catch (err) {
                     console.error('Failed to copy:', err);
+                    // Visual feedback for failure
+                    button.style.opacity = '0.5';
+                    setTimeout(() => {
+                        button.style.opacity = '';
+                    }, 500);
                 }
             });
         });

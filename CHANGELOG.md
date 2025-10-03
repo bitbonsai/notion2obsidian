@@ -9,6 +9,71 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.2.1] - 2025-10-02 - Documentation Update
+
+### 📚 Documentation
+- Updated README.md with all v2.2.0 changes
+- Updated CLAUDE.md technical documentation
+- Removed references to progress bars (no longer used)
+- Removed references to backup files (no longer created)
+- Removed created/modified dates from frontmatter examples
+- Added comprehensive zip file support documentation
+- Updated dependencies list (removed cli-progress, added fflate)
+- Documented shortened directory name feature
+- Clarified that dates are meaningless for Notion exports
+
+### 🐛 Minor Fixes
+- Fixed documentation inconsistencies
+- Updated examples to match current behavior
+
+---
+
+## [2.2.0] - 2025-10-02 - UX Streamlining Release
+
+### 🎯 Major UX Improvements
+- **Removed progress bars**: Migration is too fast for progress bars to be useful
+- **Removed backup file creation**: Cleaner output, original zip always preserved
+- **Removed created/modified dates from frontmatter**: Meaningless for Notion exports (timestamps reflect export time, not document creation)
+- **Shortened extracted directory names**: Now `Export-2d6f-extracted/` instead of full UUID for convenience
+
+### ⚡ Performance & Reliability
+- Switched from system `unzip` to pure JavaScript `fflate` library for better cross-platform compatibility
+- Better handling of special characters in filenames during extraction
+- Improved dry-run cleanup (properly removes extraction directory)
+
+### 🔧 Technical Changes
+- Removed `cli-progress` dependency (no longer needed)
+- Added `fflate` dependency for high-performance zip extraction
+- Simplified output messages for clarity
+- Major code refactoring: 332 lines changed (144 insertions, 204 deletions)
+
+### 🎨 Output Improvements
+- Cleaner, more focused terminal output
+- Better error messages
+- Simplified completion messages
+
+---
+
+## [2.1.0] - 2025-10-02 - Smart Sampling Release
+
+### 🎉 Major Feature: Smart Dry-Run Sampling
+- **Sample extraction for dry-run with zip files**: Extracts only 10% of files or 10MB maximum for preview
+- **Evenly distributed sampling**: Provides realistic preview without processing entire export
+- **Significant performance improvement**: 10MB vs 1.8GB for large exports
+- **Accurate link count estimates**: Still provides realistic migration preview
+
+### 📖 Documentation
+- Updated help text to document dry-run sampling behavior
+- Reordered examples to show zip files first (recommended workflow)
+- Clarified that dry-run works with both zip files and directories
+
+### 🔧 Technical Details
+- Intelligent file selection algorithm for representative samples
+- Shows sample size in output (e.g., "54 of 542 files (10%)")
+- Maintains compatibility with full extraction mode
+
+---
+
 ## [2.0.0] - 2024-10-02 - Optimized Release
 
 ### 🎉 Major Features Added

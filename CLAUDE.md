@@ -1,10 +1,3 @@
----
-title: "CLAUDE"
-created: 2025-10-02
-modified: 2025-10-02
-published: false
----
-
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -16,6 +9,7 @@ This is a high-performance CLI tool that migrates Notion exports to Obsidian-com
 ## Commands
 
 ### Running the migration
+
 ```bash
 # Basic migration (current directory)
 ./notion2obsidian.js
@@ -33,11 +27,13 @@ bun run dry-run ./my-export
 ```
 
 ### Command line options
+
 - `-d, --dry-run` - Preview changes without modifying files (extracts 10% sample or 10MB max for zip files)
 - `-v, --verbose` - Show detailed processing information
 - `-h, --help` - Show help message
 
 ### Testing
+
 ```bash
 # Run tests
 bun test
@@ -47,6 +43,7 @@ bun test --watch
 ```
 
 ### Dependencies
+
 ```bash
 # Install dependencies
 bun install
@@ -59,6 +56,7 @@ bun install
 The migration happens in two phases:
 
 **Phase 0: Zip Extraction (if needed)**
+
 - Detects `.zip` files and extracts to same directory as zip
 - Creates shortened directory names: `Export-2d6f-extracted/` (first 4 chars of hash instead of full UUID)
 - Uses pure JS `fflate` library for reliable extraction (handles special characters)
@@ -67,6 +65,7 @@ The migration happens in two phases:
 - Shows extracted directory location and `rm -rf` command for cleanup after migration
 
 **Phase 1: Analysis & Planning**
+
 1. Scans directory for all `.md` files and directories using `Glob`
 2. Builds a file map for link resolution (handles URL-encoded names)
 3. Extracts metadata (Notion IDs, folder structure, tags)
@@ -74,6 +73,7 @@ The migration happens in two phases:
 5. Generates preview of changes with estimated link conversion count (samples 10 files)
 
 **Phase 2: Execution**
+
 1. **Content Processing**: Adds frontmatter and converts markdown links to wiki links (batch processed, 50 files at a time)
 2. **File Renaming**: Removes Notion IDs from filenames
 3. **Directory Renaming**: Removes Notion IDs from folder names (processed deepest-first to avoid path conflicts)
@@ -81,12 +81,14 @@ The migration happens in two phases:
 ### Key Patterns & Optimizations
 
 **Regex Patterns** (defined in `PATTERNS` object at top of script):
+
 - `hexId`: Matches 32-character hexadecimal Notion IDs
 - `mdLink`: Matches markdown links `[text](file.md)`
 - `frontmatter`: Detects existing frontmatter (handles BOM and whitespace)
 - `notionIdExtract`: Extracts Notion ID from filename
 
 **Performance Features**:
+
 - Single file read per file (combines metadata extraction and content processing)
 - Batch processing with `Promise.all()` (default: 50 files at a time, configurable via `BATCH_SIZE` constant)
 - Pre-compiled regex patterns
@@ -94,6 +96,7 @@ The migration happens in two phases:
 - Sampling technique to estimate total link count (processes 10 files to calculate average)
 
 **Duplicate Handling**:
+
 - Files with identical names after ID removal are tracked in `duplicates` Map
 - Folder paths stored in frontmatter `folder` field for disambiguation
 - Original filenames preserved as aliases
@@ -101,6 +104,7 @@ The migration happens in two phases:
 ### Link Conversion Logic
 
 The `convertMarkdownLinkToWiki()` function handles:
+
 - URL-encoded paths (decodes automatically)
 - Anchor links: `[text](file.md#section)` → `[[file#section|text]]`
 - Relative paths (including `../`)
@@ -110,6 +114,7 @@ The `convertMarkdownLinkToWiki()` function handles:
 ### Frontmatter Generation
 
 Generated frontmatter includes:
+
 - Standard metadata: `title`, `tags`, `aliases`, `notion-id`
 - Folder path for duplicate disambiguation
 - Inline metadata extracted from content: `status`, `owner`, `dates`, `priority`, `completion`, `summary`
@@ -144,9 +149,11 @@ Tags are auto-generated from folder structure (normalized to lowercase with hyph
 ## Important Implementation Notes
 
 ### Bun APIs and Node.js Compatibility
+
 The tool uses a mix of Bun native APIs and Node.js compatibility:
 
 **Native Bun APIs:**
+
 - `Glob` from "bun" - Fast file globbing
 - `Bun.file()` - Efficient file reading
 - `Bun.write()` - Fast file writing
@@ -154,15 +161,18 @@ The tool uses a mix of Bun native APIs and Node.js compatibility:
 - Runtime check at startup exits if Bun is not available
 
 **Node.js Compatibility (via Bun):**
+
 - `node:fs/promises` - Directory operations (stat, readdir, rename, copyFile, mkdir, rm, writeFile)
 - `node:path` - Path utilities (join, dirname, basename, extname, relative)
 - Uses `node:` prefix to explicitly indicate Node.js compatibility APIs
 
 **Third-party Dependencies:**
+
 - **chalk** - Terminal colors and formatting
 - **fflate** - Pure JS zip extraction (handles special characters, no system dependencies)
 
 ### Key Implementation Details
+
 - **Directory renaming**: Must happen deepest-first to avoid path conflicts (sorted by depth in `dirMigrationMap`)
 - **File map**: Stores both original and URL-encoded names for link resolution
 - **Link counting**: Estimated by sampling first 10 files to avoid double-processing
@@ -176,6 +186,7 @@ The tool uses a mix of Bun native APIs and Node.js compatibility:
 - **No backups**: Files are modified directly (use git or dry-run for safety)
 
 ### Robustness Features
+
 - **Rename collision detection**: If target filename exists, appends counter (e.g., `Document-1.md`, `Document-2.md`)
 - **Symlink protection**: Detects and skips symbolic links to prevent infinite loops in directory traversal
 - **Circular reference detection**: Uses `realpath()` and visited set to detect circular directory references
@@ -183,6 +194,7 @@ The tool uses a mix of Bun native APIs and Node.js compatibility:
 - **Test write capability**: Creates and removes test file to verify actual write permissions
 
 ### Testing Notes
+
 - Tests are in `notion2obsidian.test.js` using Bun's built-in test runner
 - Core utility functions are duplicated in test file for testing (not exported from main script)
 - Test suites cover: Notion ID detection, filename cleaning, sanitization
