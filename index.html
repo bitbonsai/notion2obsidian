@@ -3,31 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Primary Meta Tags -->
     <title>notion2obsidian - Fast Notion to Obsidian Migration</title>
-    <meta name="description" content="A high-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format. Fast, clean, and simple.">
+    <meta name="title" content="notion2obsidian - Fast Notion to Obsidian Migration">
+    <meta name="description" content="Fast Notion to Obsidian migration. Clean, simple, minimal dependencies. Migrate your entire workspace in seconds with this high-performance CLI tool.">
+    <meta name="keywords" content="notion, obsidian, migration, markdown, cli, converter, notion2obsidian, export, notes">
+    <meta name="author" content="bitbonsai">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bitbonsai.github.io/notion2obsidian/">
+    <meta property="og:title" content="notion2obsidian - Fast Notion to Obsidian Migration">
+    <meta property="og:description" content="Fast Notion to Obsidian migration. Clean, simple, minimal dependencies. Migrate your entire workspace in seconds.">
+    <meta property="og:image" content="https://bitbonsai.github.io/notion2obsidian/og-image.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://bitbonsai.github.io/notion2obsidian/">
+    <meta property="twitter:title" content="notion2obsidian - Fast Notion to Obsidian Migration">
+    <meta property="twitter:description" content="Fast Notion to Obsidian migration. Clean, simple, minimal dependencies. Migrate your entire workspace in seconds.">
+    <meta property="twitter:image" content="https://bitbonsai.github.io/notion2obsidian/og-image.jpg">
+
+    <link rel="icon" type="image/svg+xml" href="logo.svg">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <a href="#install" class="skip-nav">Skip to main content</a>
     <div class="container">
         <!-- Hero Section -->
         <header class="hero">
             <div class="hero-content">
-                <div class="badge">💎 v2.2.1</div>
+                <div class="badge-group">
+                    <div class="badge badge-version">version 2.2.1</div>
+                    <div class="badge badge-free">FREE</div>
+                </div>
+                <img src="logo.svg" alt="notion2obsidian logo" class="hero-logo">
                 <h1 class="title">
                     <span class="gradient-text">notion2obsidian</span>
                 </h1>
                 <p class="subtitle">
-                    Migrate your Notion exports to Obsidian in seconds.<br>
-                    Fast, clean, and simple.
+                    Fast Notion to Obsidian migration.<br>
+                    Clean, simple, minimal dependencies.
                 </p>
                 <div class="cta-buttons">
-                    <a href="https://github.com/bitbonsai/notion2obsidian" class="btn btn-primary">
+                    <a href="#install" class="btn btn-primary">Get Started →</a>
+                    <a href="https://github.com/bitbonsai/notion2obsidian" class="btn btn-secondary">
                         <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
                         </svg>
                         View on GitHub
                     </a>
-                    <a href="#install" class="btn btn-secondary">Get Started →</a>
                 </div>
             </div>
 
@@ -44,24 +70,24 @@
                 <div class="terminal-body">
                     <div class="terminal-line">
                         <span class="prompt">$</span>
-                        <span class="command">notion2obsidian Export-2d6fa1e5-8571-4845-8e81-f7d5ca30194a.zip</span>
+                        <span class="command">notion2obsidian Export-2d6fa1e5-8571-4845.zip</span>
                     </div>
                     <div class="terminal-line output">
                         <span class="gem">💎</span> Notion to Obsidian
                     </div>
                     <div class="terminal-line output blank"></div>
-                    <div class="terminal-line output">
+                    <div class="terminal-line output highlight-line">
                         <span class="package">📦</span> Extracting zip file...
                     </div>
                     <div class="terminal-line output dim">
                         Extracting to: Export-2d6f-extracted
                     </div>
                     <div class="terminal-line output blank"></div>
-                    <div class="terminal-line output success">
+                    <div class="terminal-line output success highlight-line">
                         ✓ Extracted 2088 files
                     </div>
                     <div class="terminal-line output blank"></div>
-                    <div class="terminal-line output">
+                    <div class="terminal-line output highlight-line">
                         Found <span class="highlight">542</span> markdown files
                     </div>
                     <div class="terminal-line output">
@@ -76,11 +102,11 @@
                         ... (scroll up for details)
                     </div>
                     <div class="terminal-line output blank"></div>
-                    <div class="terminal-line output">
+                    <div class="terminal-line output highlight-line">
                         Phase 2: Executing migration...
                     </div>
                     <div class="terminal-line output blank"></div>
-                    <div class="terminal-line output success">
+                    <div class="terminal-line output success highlight-line">
                         ✓ Processed 542 files, converted 1247 links
                     </div>
                     <div class="terminal-line output success">
@@ -90,10 +116,26 @@
                         ✓ Renamed 23 directories
                     </div>
                     <div class="terminal-line output blank"></div>
-                    <div class="terminal-line output success">
+                    <div class="terminal-line output success highlight-line">
                         ✅ Migration complete!
                     </div>
                 </div>
+            </div>
+
+            <!-- Badges -->
+            <div class="terminal-footer">
+                <a href="https://github.com/bitbonsai/notion2obsidian" target="_blank" rel="noopener noreferrer" class="badge-link">
+                    <img src="https://img.shields.io/github/stars/bitbonsai/notion2obsidian?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626" alt="GitHub Stars" loading="lazy">
+                </a>
+                <a href="https://github.com/sponsors/bitbonsai" target="_blank" rel="noopener noreferrer" class="badge-link">
+                    <img src="https://img.shields.io/github/sponsors/bitbonsai?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626" alt="GitHub Sponsors" loading="lazy">
+                </a>
+                <a href="https://ko-fi.com/bitbonsai" target="_blank" rel="noopener noreferrer" class="badge-link">
+                    <img src="https://img.shields.io/badge/Ko--fi-Support-8250E7?style=flat&logo=ko-fi&logoColor=white&labelColor=262626" alt="Ko-fi" loading="lazy">
+                </a>
+                <a href="https://liberapay.com/bitbonsai/" target="_blank" rel="noopener noreferrer" class="badge-link">
+                    <img src="https://img.shields.io/badge/Liberapay-Weekly-8250E7?style=flat&logo=liberapay&logoColor=white&labelColor=262626" alt="Liberapay" loading="lazy">
+                </a>
             </div>
         </header>
 
@@ -104,78 +146,39 @@
                 <div class="feature-card">
                     <div class="feature-icon">⚡</div>
                     <h3>Lightning Fast</h3>
-                    <p>Batch processing with concurrent operations. Process thousands of files in seconds.</p>
+                    <p>Migrate your entire workspace in under a minute. Batch processing with concurrent operations handles thousands of files effortlessly.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">📦</div>
-                    <h3>Direct Zip Support</h3>
-                    <p>Extract and migrate zip files in one command. No manual extraction needed.</p>
+                    <h3>Zero-Friction Setup</h3>
+                    <p>Extract and migrate zip files in one command. Preview changes with dry-run mode. No manual extraction, no backups cluttering your workspace.</p>
                 </div>
                 <div class="feature-card">
                     <div class="feature-icon">🔗</div>
-                    <h3>Smart Link Conversion</h3>
-                    <p>Automatically converts markdown links to Obsidian wiki links with anchor support.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🏷️</div>
-                    <h3>Auto-tagging</h3>
-                    <p>Generates tags from your folder structure automatically.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🔍</div>
-                    <h3>Dry Run Mode</h3>
-                    <p>Preview changes before applying them with smart sampling for large exports.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">🎯</div>
-                    <h3>Clean Output</h3>
-                    <p>Minimal, focused output. No unnecessary progress bars or backups cluttering your workspace.</p>
+                    <h3>Perfect Migration</h3>
+                    <p>Smart link conversion, auto-tagging from folders, frontmatter generation, and duplicate handling. Everything works in Obsidian from day one.</p>
                 </div>
             </div>
         </section>
 
-        <!-- Installation -->
-        <section id="install" class="install">
-            <h2 class="section-title">Get Started</h2>
-            <div class="install-grid">
-                <div class="install-step">
-                    <div class="step-number">1</div>
-                    <h3>Install Bun</h3>
-                    <div class="code-block">
-                        <code>curl -fsSL https://bun.sh/install | bash</code>
-                    </div>
+        <!-- Who is this for? -->
+        <section class="who-section">
+            <h2 class="section-title">Who is this for?</h2>
+            <div class="who-grid">
+                <div class="who-card">
+                    <div class="who-emoji">🔄</div>
+                    <h3>Notion Refugees</h3>
+                    <p>Making the switch to Obsidian for better performance, offline access, or local-first control? Migrate your entire workspace in minutes.</p>
                 </div>
-                <div class="install-step">
-                    <div class="step-number">2</div>
-                    <h3>Install notion2obsidian</h3>
-                    <div class="code-block">
-                        <code>bun install -g notion2obsidian</code>
-                    </div>
+                <div class="who-card">
+                    <div class="who-emoji">🧠</div>
+                    <h3>Second Brain Builders</h3>
+                    <p>Years of notes in Notion but want Obsidian's graph view, backlinks, and plugin ecosystem? Keep your structure intact during migration.</p>
                 </div>
-                <div class="install-step">
-                    <div class="step-number">3</div>
-                    <h3>Export from Notion</h3>
-                    <div class="code-block">
-                        <code>Settings & Members → Export →<br>
-Export all workspace content →<br>
-Markdown & CSV → Export</code>
-                    </div>
-                </div>
-                <div class="install-step">
-                    <div class="step-number">4</div>
-                    <h3>Run Migration</h3>
-                    <div class="code-block">
-                        <code>notion2obsidian Export-abc123.zip</code>
-                    </div>
-                </div>
-                <div class="install-step">
-                    <div class="step-number">5</div>
-                    <h3>Open in Obsidian</h3>
-                    <div class="code-block">
-                        <code>Open vault → Browse →<br>
-Select extracted folder →<br>
-Start using your vault!</code>
-                    </div>
+                <div class="who-card">
+                    <div class="who-emoji">⚙️</div>
+                    <h3>Automation Enthusiasts</h3>
+                    <p>Need a scriptable, CLI-based migration that you can run on multiple exports or integrate into workflows? Built for the command line.</p>
                 </div>
             </div>
         </section>
@@ -190,7 +193,7 @@ Start using your vault!</code>
                         <h3>Cleans filenames</h3>
                         <p>Removes 32-character Notion IDs from files and directories</p>
                         <div class="example">
-                            <div class="example-before">My Document abc123def456...xyz.md</div>
+                            <div class="example-before">My Document 2d6fa1e585714845.md</div>
                             <div class="example-arrow">→</div>
                             <div class="example-after">My Document.md</div>
                         </div>
@@ -200,14 +203,14 @@ Start using your vault!</code>
                     <div class="process-icon">📝</div>
                     <div class="process-content">
                         <h3>Adds frontmatter</h3>
-                        <p>Generates YAML metadata including title, tags, and Notion IDs</p>
+                        <p>Generates YAML metadata including title, tags (auto-generated from folder structure), and Notion IDs</p>
                         <div class="example">
                             <pre>---
 title: "My Document"
 tags: [projects, work]
 notion-alias:
-  - "My Document abc123..."
-notion-id: "abc123..."
+  - "My Document 2d6fa1e585714845"
+notion-id: "2d6fa1e585714845be81f7d5ca30194a"
 published: false
 ---</pre>
                         </div>
@@ -238,10 +241,167 @@ published: false
             </div>
         </section>
 
+        <!-- Installation -->
+        <section id="install" class="install">
+            <h2 class="section-title">Get Started <span class="time-estimate">~3 minutes</span></h2>
+
+            <div class="install-intro">
+                <p><strong>Why Bun?</strong> This tool is built with Bun, a modern JavaScript runtime that's significantly faster than Node.js. Bun handles thousands of files in seconds and provides native TypeScript support. Installing Bun takes just one command and won't interfere with your existing Node.js setup.</p>
+            </div>
+
+            <div class="install-stack">
+                <!-- Step 1 -->
+                <div class="install-row">
+                    <div class="install-instruction">
+                        <div class="step-number">1</div>
+                        <div>
+                            <h3>Install Bun runtime</h3>
+                            <p>Bun is a fast JavaScript runtime. If you already have it, skip to step 2.</p>
+                        </div>
+                    </div>
+                    <div class="install-command">
+                        <div class="code-block">
+                            <button class="copy-button" aria-label="Copy to clipboard">
+                                <svg class="copy-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M13.1543 6.00391C14.7394 6.08421 16 7.39489 16 9V19C16 20.6569 14.6569 22 13 22H5C3.34315 22 2 20.6569 2 19V9C2 7.34315 3.34315 6 5 6H13L13.1543 6.00391ZM5 8C4.44772 8 4 8.44772 4 9V19C4 19.5523 4.44772 20 5 20H13C13.5523 20 14 19.5523 14 19V9C14 8.48232 13.6067 8.05621 13.1025 8.00488L13 8H5Z" fill="#222428"/>
+                                    <path d="M19.1543 2.00391C20.7394 2.08421 22 3.39489 22 5V15C22 16.6569 20.6569 18 19 18H18V16H19C19.5523 16 20 15.5523 20 15V5C20 4.48232 19.6067 4.05621 19.1025 4.00488L19 4H11C10.4477 4 10 4.44772 10 5H8C8 3.34315 9.34315 2 11 2H19L19.1543 2.00391Z" fill="#222428"/>
+                                </svg>
+                                <svg class="check-icon" style="display: none;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19.7705 6.63672L10.2705 18.1367L8.72559 18.1328L4.22559 12.6328L5.77441 11.3672L9.50391 15.9248L18.2295 5.36328L19.7705 6.63672Z" fill="#222428"/>
+                                </svg>
+                            </button>
+                            <code>curl -fsSL https://bun.sh/install | bash</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="install-row">
+                    <div class="install-instruction">
+                        <div class="step-number">2</div>
+                        <div>
+                            <h3>Install notion2obsidian</h3>
+                            <p>Install the tool globally to use it anywhere.</p>
+                        </div>
+                    </div>
+                    <div class="install-command">
+                        <div class="code-block">
+                            <button class="copy-button" aria-label="Copy to clipboard">
+                                <svg class="copy-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M13.1543 6.00391C14.7394 6.08421 16 7.39489 16 9V19C16 20.6569 14.6569 22 13 22H5C3.34315 22 2 20.6569 2 19V9C2 7.34315 3.34315 6 5 6H13L13.1543 6.00391ZM5 8C4.44772 8 4 8.44772 4 9V19C4 19.5523 4.44772 20 5 20H13C13.5523 20 14 19.5523 14 19V9C14 8.48232 13.6067 8.05621 13.1025 8.00488L13 8H5Z" fill="#222428"/>
+                                    <path d="M19.1543 2.00391C20.7394 2.08421 22 3.39489 22 5V15C22 16.6569 20.6569 18 19 18H18V16H19C19.5523 16 20 15.5523 20 15V5C20 4.48232 19.6067 4.05621 19.1025 4.00488L19 4H11C10.4477 4 10 4.44772 10 5H8C8 3.34315 9.34315 2 11 2H19L19.1543 2.00391Z" fill="#222428"/>
+                                </svg>
+                                <svg class="check-icon" style="display: none;" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19.7705 6.63672L10.2705 18.1367L8.72559 18.1328L4.22559 12.6328L5.77441 11.3672L9.50391 15.9248L18.2295 5.36328L19.7705 6.63672Z" fill="#222428"/>
+                                </svg>
+                            </button>
+                            <code>bun install -g notion2obsidian</code>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="install-row install-highlight">
+                    <div class="install-instruction">
+                        <div class="step-number">3</div>
+                        <div>
+                            <h3>Export from Notion</h3>
+                            <p>In Notion: Settings & Members → Export → Export all workspace content → Markdown & CSV</p>
+                        </div>
+                    </div>
+                    <div class="install-command">
+                        <div class="info-box">
+                            💡 Download the .zip file to your computer
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="install-row">
+                    <div class="install-instruction">
+                        <div class="step-number">4</div>
+                        <div>
+                            <h3>Run the migration</h3>
+                            <p>Point to your downloaded zip file or extracted folder.</p>
+                        </div>
+                    </div>
+                    <div class="install-command">
+                        <div class="code-block">
+                            <code>notion2obsidian Export-2d6fa1e5-8571-4845.zip</code>
+                        </div>
+                        <div class="code-hint">Preview first: add <code>--dry-run</code></div>
+                    </div>
+                </div>
+
+                <!-- Step 5 -->
+                <div class="install-row">
+                    <div class="install-instruction">
+                        <div class="step-number">5</div>
+                        <div>
+                            <h3>Open in Obsidian</h3>
+                            <p>Create a new vault pointing to your migrated folder.</p>
+                        </div>
+                    </div>
+                    <div class="install-command">
+                        <div class="info-box">
+                            📂 Open as vault → Browse → Select the extracted folder
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ -->
+        <section class="faq">
+            <h2 class="section-title">Common Questions</h2>
+            <div class="faq-list">
+                <div class="faq-item">
+                    <h3><span class="faq-icon">?</span> Will this modify my original Notion export?</h3>
+                    <p>If you provide a .zip file, it will <strong>extract</strong> it first (your original zip stays untouched), then modify the extracted folder. You can always delete the extracted folder and re-extract from the zip to get back the original Notion export. Use <code>--dry-run</code> to preview changes before committing.</p>
+                </div>
+                <div class="faq-item">
+                    <h3><span class="faq-icon">?</span> What if I have duplicate filenames?</h3>
+                    <p>The tool automatically handles duplicates by adding folder context to frontmatter. For example:</p>
+                    <div class="example" style="margin-top: 1rem;">
+                        <div style="margin-bottom: 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Problem:</strong> After removing Notion IDs, these become the same filename:</div>
+                        <pre style="color: #ff6b6b;">Work/Projects/README 2d6fa1e5.md  →  README.md
+Personal/Notes/README 8f3c7a19.md  →  README.md</pre>
+                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Solution:</strong> Folder context added to frontmatter:</div>
+                        <pre style="color: var(--color-success);">---
+folder: "Work/Projects"
+---
+# README.md (first file)
+
+---
+folder: "Personal/Notes"
+---
+# README.md (second file)</pre>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <h3><span class="faq-icon">?</span> Do I need to extract the zip file first?</h3>
+                    <p>No! Just point notion2obsidian at the .zip file and it will extract and migrate in one step.</p>
+                </div>
+                <div class="faq-item">
+                    <h3><span class="faq-icon">?</span> What about images and attachments?</h3>
+                    <p>All images, PDFs, and other attachments are preserved. Attachment folders get cleaned up too:</p>
+                    <div class="example" style="margin-top: 1rem;">
+                        <div class="example-before">My Document 2d6fa1e5/image.png</div>
+                        <div class="example-arrow">→</div>
+                        <div class="example-after">My Document/image.png</div>
+                    </div>
+                </div>
+                <div class="faq-item">
+                    <h3><span class="faq-icon">?</span> Can I undo the migration?</h3>
+                    <p>Your original .zip file is never modified and always preserved. Simply delete the extracted folder and re-extract from the zip to get back the original Notion export. For extra safety, keep a backup of the zip file.</p>
+                </div>
+            </div>
+        </section>
+
         <!-- Footer -->
         <footer class="footer">
             <div class="footer-content">
-                <p>Built with ❤️ by <a href="https://github.com/bitbonsai" class="author-link">BitBonsai</a></p>
+                <p>Built with ❤️ by <a href="https://github.com/bitbonsai" class="author-link">bitbonsai</a></p>
                 <div class="footer-links">
                     <a href="https://github.com/bitbonsai/notion2obsidian">GitHub</a>
                     <span>•</span>
@@ -257,5 +417,39 @@ published: false
             </div>
         </footer>
     </div>
+
+    <!-- Back to top button -->
+    <a href="#" class="back-to-top" aria-label="Back to top">↑</a>
+
+    <script>
+        // Copy to clipboard functionality
+        document.querySelectorAll('.copy-button').forEach(button => {
+            button.addEventListener('click', async () => {
+                const codeBlock = button.parentElement;
+                const code = codeBlock.querySelector('code').textContent;
+
+                try {
+                    await navigator.clipboard.writeText(code);
+
+                    // Show checkmark
+                    const copyIcon = button.querySelector('.copy-icon');
+                    const checkIcon = button.querySelector('.check-icon');
+
+                    copyIcon.style.display = 'none';
+                    checkIcon.style.display = 'block';
+                    button.classList.add('copied');
+
+                    // Reset after 2 seconds
+                    setTimeout(() => {
+                        copyIcon.style.display = 'block';
+                        checkIcon.style.display = 'none';
+                        button.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy:', err);
+                }
+            });
+        });
+    </script>
 </body>
 </html>
