@@ -164,6 +164,91 @@ describe("Integration Tests", () => {
   });
 });
 
+describe("Image Filename Normalization", () => {
+  function normalizeImageFilename(filename) {
+    const extname = (path) => {
+      const idx = path.lastIndexOf('.');
+      return idx === -1 ? '' : path.slice(idx);
+    };
+
+    const ext = extname(filename).toLowerCase();
+    const nameWithoutExt = filename.slice(0, -ext.length);
+    return nameWithoutExt.replace(/\s+/g, '-').toLowerCase() + ext;
+  }
+
+  test("should normalize image filename with spaces", () => {
+    expect(normalizeImageFilename("Untitled 1.png")).toBe("untitled-1.png");
+    expect(normalizeImageFilename("My Image File.jpg")).toBe("my-image-file.jpg");
+  });
+
+  test("should convert to lowercase", () => {
+    expect(normalizeImageFilename("MyImage.PNG")).toBe("myimage.png");
+    expect(normalizeImageFilename("LOGO.SVG")).toBe("logo.svg");
+  });
+
+  test("should handle multiple spaces", () => {
+    expect(normalizeImageFilename("Image   With    Spaces.png")).toBe("image-with-spaces.png");
+  });
+
+  test("should preserve extension case normalization", () => {
+    expect(normalizeImageFilename("file.PNG")).toBe("file.png");
+    expect(normalizeImageFilename("file.JPEG")).toBe("file.jpeg");
+  });
+
+  test("should handle already normalized names", () => {
+    expect(normalizeImageFilename("already-normalized.png")).toBe("already-normalized.png");
+  });
+});
+
+describe("Image Reference Updates", () => {
+  function updateImageReference(imagePath) {
+    // Decode URL-encoded paths and get just the filename
+    const decodedPath = decodeURIComponent(imagePath);
+    const basename = decodedPath.split('/').pop();
+
+    // Normalize the filename
+    const ext = basename.lastIndexOf('.') !== -1
+      ? basename.slice(basename.lastIndexOf('.')).toLowerCase()
+      : '';
+    const nameWithoutExt = basename.slice(0, -ext.length);
+    return nameWithoutExt.replace(/\s+/g, '-').toLowerCase() + ext;
+  }
+
+  test("should decode URL-encoded image paths", () => {
+    expect(updateImageReference("Better%20performance%20%3D%20better%20design/Untitled.png"))
+      .toBe("untitled.png");
+  });
+
+  test("should handle simple paths", () => {
+    expect(updateImageReference("Folder/Image Name.png")).toBe("image-name.png");
+  });
+
+  test("should extract just filename from path", () => {
+    expect(updateImageReference("Deep/Nested/Folder/My Image.jpg"))
+      .toBe("my-image.jpg");
+  });
+
+  test("should handle special characters", () => {
+    expect(updateImageReference("Folder/Image%20%28copy%29.png"))
+      .toBe("image-(copy).png");
+  });
+});
+
+describe("Attachment Folder Detection", () => {
+  test("should match MD file with attachment folder", () => {
+    const mdFile = "Better performance 456def.md";
+    const folderName = "Better performance 456def";
+    const mdBase = mdFile.slice(0, -3); // Remove .md
+    expect(mdBase).toBe(folderName);
+  });
+
+  test("should handle complex folder names", () => {
+    const mdFile = "My Project: Plans abc123def456789012345678901234ab.md";
+    const mdBase = mdFile.slice(0, -3);
+    expect(mdBase).toBe("My Project: Plans abc123def456789012345678901234ab");
+  });
+});
+
 describe("End-to-End Zip Migration Test", () => {
   const { mkdir, writeFile, readFile, rm } = require("fs/promises");
   const { join } = require("path");
