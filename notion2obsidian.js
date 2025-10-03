@@ -1043,6 +1043,65 @@ async function main() {
 
   console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedDirs} directories\n`);
 
+  // Step 4: Move markdown files into attachment folders if they exist
+  console.log(chalk.green('Step 4: Organizing files with attachments...'));
+
+  let movedFiles = 0;
+  const movedFilesMap = new Map(); // Track which files were moved
+
+  for (const file of filesToRename) {
+    const mdFile = file.newPath;
+    const mdFileBase = basename(mdFile, '.md');
+    const mdFileDir = dirname(mdFile);
+    const potentialAttachmentFolder = join(mdFileDir, mdFileBase);
+
+    try {
+      // Check if there's a folder with the same name as the .md file (without extension)
+      const folderStats = await stat(potentialAttachmentFolder).catch(() => null);
+
+      if (folderStats && folderStats.isDirectory()) {
+        // Move the .md file into its attachment folder
+        const newMdPath = join(potentialAttachmentFolder, basename(mdFile));
+        await rename(mdFile, newMdPath);
+        movedFiles++;
+        movedFilesMap.set(mdFile, newMdPath);
+
+        // Update image paths in the file to be relative (just filenames)
+        const content = await Bun.file(newMdPath).text();
+        const updatedContent = content.replace(
+          /(!?\[[^\]]*\]\()([^)]+)(\))/g,
+          (match, prefix, path, suffix) => {
+            // Skip external URLs
+            if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('mailto:')) {
+              return match;
+            }
+            // Skip wiki links
+            if (match.startsWith('[[')) {
+              return match;
+            }
+            // Decode URL-encoded paths
+            const decodedPath = decodeURIComponent(path);
+
+            // If path contains the folder name, extract just the filename
+            const pathParts = decodedPath.split('/');
+            if (pathParts.length > 1 && pathParts[pathParts.length - 2] === mdFileBase) {
+              // This is an attachment in our folder, use just the filename
+              return `${prefix}${pathParts[pathParts.length - 1]}${suffix}`;
+            }
+
+            return match;
+          }
+        );
+
+        await Bun.write(newMdPath, updatedContent);
+      }
+    } catch (err) {
+      // Silently skip if folder doesn't exist or any other error
+    }
+  }
+
+  console.log(`  ${chalk.green('✓')} Moved ${movedFiles} files into their attachment folders\n`);
+
   // Final summary
   console.log(chalk.green.bold('✅ Migration complete!\n'));
   console.log(chalk.white('Summary:'));
@@ -1050,6 +1109,9 @@ async function main() {
   console.log(`   🔗 Converted ${chalk.cyan(stats.totalLinks)} markdown links to wiki links`);
   console.log(`   ✏️  Renamed ${chalk.cyan(stats.renamedFiles)} files`);
   console.log(`   📁 Renamed ${chalk.cyan(stats.renamedDirs)} directories`);
+  if (movedFiles > 0) {
+    console.log(`   📦 Moved ${chalk.cyan(movedFiles)} files into attachment folders`);
+  }
 
   if (stats.namingConflicts.length > 0) {
     console.log(chalk.yellow(`\n📝 ${stats.namingConflicts.length} naming conflicts resolved:`));
