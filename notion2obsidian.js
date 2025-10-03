@@ -1218,8 +1218,13 @@ async function main() {
 
   console.log(`  ${chalk.green('✓')} Normalized ${normalizedImages} image files\n`);
 
-  // Step 4b: Update all image references (cross-folder references)
+  // Step 4b: Update all image references using remark (proper markdown parsing)
   console.log(chalk.green('Step 4b: Normalizing all image references...'));
+
+  const { unified } = await import('unified');
+  const remarkParse = await import('remark-parse');
+  const remarkStringify = await import('remark-stringify');
+  const { visit } = await import('unist-util-visit');
 
   // Build a map of old folder names → new folder names (without Notion IDs)
   const folderNameMap = new Map();
@@ -1227,6 +1232,17 @@ async function main() {
     const oldName = basename(dir.oldPath);
     const newName = basename(dir.newPath);
     folderNameMap.set(oldName, newName);
+  }
+
+  // Build a comprehensive map of actual files in each directory
+  const filesByDir = new Map();
+  for (const dir of allDirs) {
+    try {
+      const filesInDir = await readdir(dir);
+      filesByDir.set(dir, filesInDir);
+    } catch (err) {
+      // Skip if can't read
+    }
   }
 
   let updatedReferences = 0;
@@ -1237,56 +1253,78 @@ async function main() {
 
   for (const mdFile of allMdFiles) {
     const mdPath = join(config.targetDir, mdFile);
+    const mdDir = dirname(mdPath);
     let content = await Bun.file(mdPath).text();
     let modified = false;
 
-    // First pass: Update image references (handle complex alt text with nested brackets)
-    const updatedContent = content.replace(
-      /!\[([^\]]*(?:\[[^\]]*\][^\]]*)*)\]\(([^)]+)\)/g,
-      (match, altText, path) => {
-        // Skip external URLs
-        if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('mailto:')) {
-          return match;
-        }
+    // Parse markdown to AST
+    const processor = unified()
+      .use(remarkParse.default)
+      .use(() => (tree) => {
+        visit(tree, 'image', (node) => {
+          const url = node.url;
 
-        // Decode URL-encoded paths
-        const decodedPath = decodeURIComponent(path);
-        const pathParts = decodedPath.split('/');
-
-        // Check if this is an image reference
-        const fileName = pathParts[pathParts.length - 1];
-        const ext = extname(fileName).toLowerCase();
-
-        if (imageExtensions.includes(ext)) {
-          // Normalize image filename
-          const nameWithoutExt = basename(fileName, extname(fileName));
-          const normalizedFileName = nameWithoutExt
-            .replace(/\s+/g, '-')
-            .toLowerCase() + ext;
-
-          // Update folder paths if needed
-          const updatedPathParts = pathParts.slice(0, -1).map(part => {
-            // Check if this folder was renamed (remove Notion ID)
-            return folderNameMap.get(part) || part;
-          });
-
-          // Rebuild path
-          updatedPathParts.push(normalizedFileName);
-          const newPath = updatedPathParts.join('/');
-
-          if (newPath !== path) {
-            modified = true;
-            updatedReferences++;
-            return `![${altText}](${newPath})`;
+          // Skip external URLs
+          if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('mailto:')) {
+            return;
           }
-        }
 
-        return match;
-      }
-    );
+          // Decode URL-encoded path
+          const decodedUrl = decodeURIComponent(url);
+          const pathParts = decodedUrl.split('/');
+
+          // Build absolute path to the referenced file
+          const imagePath = join(mdDir, decodedUrl);
+          const imageDir = dirname(imagePath);
+          const fileName = pathParts[pathParts.length - 1];
+
+          // Get actual files in that directory
+          const actualFiles = filesByDir.get(imageDir) || [];
+
+          // Try to find the actual file (case-insensitive, with/without extension)
+          const nameWithoutExt = basename(fileName, extname(fileName));
+          const normalizedBaseName = nameWithoutExt.replace(/\s+/g, '-').toLowerCase();
+
+          let matchedFile = null;
+
+          // First try: exact match with extension
+          const ext = extname(fileName).toLowerCase();
+          if (ext) {
+            const expectedName = normalizedBaseName + ext;
+            matchedFile = actualFiles.find(f => f.toLowerCase() === expectedName);
+          }
+
+          // Second try: find any file with matching base name (any extension)
+          if (!matchedFile) {
+            matchedFile = actualFiles.find(f => {
+              const fBase = basename(f, extname(f)).toLowerCase();
+              return fBase === normalizedBaseName;
+            });
+          }
+
+          if (matchedFile) {
+            // Update folder paths to remove Notion IDs
+            const updatedPathParts = pathParts.slice(0, -1).map(part => {
+              return folderNameMap.get(part) || part;
+            });
+
+            // Rebuild path with actual filename
+            updatedPathParts.push(matchedFile);
+            const newUrl = updatedPathParts.join('/');
+
+            if (newUrl !== url) {
+              node.url = newUrl;
+              modified = true;
+              updatedReferences++;
+            }
+          }
+        });
+      })
+      .use(remarkStringify.default);
 
     if (modified) {
-      await Bun.write(mdPath, updatedContent);
+      const result = await processor.process(content);
+      await Bun.write(mdPath, String(result));
     }
   }
 
