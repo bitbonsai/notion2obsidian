@@ -44,20 +44,52 @@
                 <div class="terminal-body">
                     <div class="terminal-line">
                         <span class="prompt">$</span>
-                        <span class="command">./notion2obsidian.js ./Export-abc123.zip</span>
+                        <span class="command">notion2obsidian Export-2d6fa1e5-8571-4845-8e81-f7d5ca30194a.zip</span>
                     </div>
                     <div class="terminal-line output">
                         <span class="gem">💎</span> Notion to Obsidian
                     </div>
+                    <div class="terminal-line output blank"></div>
                     <div class="terminal-line output">
                         <span class="package">📦</span> Extracting zip file...
                     </div>
+                    <div class="terminal-line output dim">
+                        Extracting to: Export-2d6f-extracted
+                    </div>
+                    <div class="terminal-line output blank"></div>
                     <div class="terminal-line output success">
                         ✓ Extracted 2088 files
                     </div>
+                    <div class="terminal-line output blank"></div>
                     <div class="terminal-line output">
                         Found <span class="highlight">542</span> markdown files
                     </div>
+                    <div class="terminal-line output">
+                        Found <span class="highlight">23</span> directories
+                    </div>
+                    <div class="terminal-line output blank"></div>
+                    <div class="terminal-line output dim">
+                        ═══ MIGRATION PREVIEW ═══
+                    </div>
+                    <div class="terminal-line output blank"></div>
+                    <div class="terminal-line output dim">
+                        ... (scroll up for details)
+                    </div>
+                    <div class="terminal-line output blank"></div>
+                    <div class="terminal-line output">
+                        Phase 2: Executing migration...
+                    </div>
+                    <div class="terminal-line output blank"></div>
+                    <div class="terminal-line output success">
+                        ✓ Processed 542 files, converted 1247 links
+                    </div>
+                    <div class="terminal-line output success">
+                        ✓ Renamed 542 files
+                    </div>
+                    <div class="terminal-line output success">
+                        ✓ Renamed 23 directories
+                    </div>
+                    <div class="terminal-line output blank"></div>
                     <div class="terminal-line output success">
                         ✅ Migration complete!
                     </div>
@@ -115,18 +147,34 @@
                 </div>
                 <div class="install-step">
                     <div class="step-number">2</div>
-                    <h3>Clone & Install</h3>
+                    <h3>Install notion2obsidian</h3>
                     <div class="code-block">
-                        <code>git clone https://github.com/bitbonsai/notion2obsidian.git<br>
-cd notion2obsidian<br>
-bun install</code>
+                        <code>bun install -g notion2obsidian</code>
                     </div>
                 </div>
                 <div class="install-step">
                     <div class="step-number">3</div>
+                    <h3>Export from Notion</h3>
+                    <div class="code-block">
+                        <code>Settings & Members → Export →<br>
+Export all workspace content →<br>
+Markdown & CSV → Export</code>
+                    </div>
+                </div>
+                <div class="install-step">
+                    <div class="step-number">4</div>
                     <h3>Run Migration</h3>
                     <div class="code-block">
-                        <code>./notion2obsidian.js ./Export-abc123.zip</code>
+                        <code>notion2obsidian Export-abc123.zip</code>
+                    </div>
+                </div>
+                <div class="install-step">
+                    <div class="step-number">5</div>
+                    <h3>Open in Obsidian</h3>
+                    <div class="code-block">
+                        <code>Open vault → Browse →<br>
+Select extracted folder →<br>
+Start using your vault!</code>
                     </div>
                 </div>
             </div>
@@ -141,27 +189,50 @@ bun install</code>
                     <div class="process-content">
                         <h3>Cleans filenames</h3>
                         <p>Removes 32-character Notion IDs from files and directories</p>
+                        <div class="example">
+                            <div class="example-before">My Document abc123def456...xyz.md</div>
+                            <div class="example-arrow">→</div>
+                            <div class="example-after">My Document.md</div>
+                        </div>
                     </div>
                 </div>
                 <div class="process-item">
                     <div class="process-icon">📝</div>
                     <div class="process-content">
                         <h3>Adds frontmatter</h3>
-                        <p>Generates YAML metadata including title, tags, aliases, and Notion IDs</p>
+                        <p>Generates YAML metadata including title, tags, and Notion IDs</p>
+                        <div class="example">
+                            <pre>---
+title: "My Document"
+tags: [projects, work]
+notion-alias:
+  - "My Document abc123..."
+notion-id: "abc123..."
+published: false
+---</pre>
+                        </div>
                     </div>
                 </div>
                 <div class="process-item">
                     <div class="process-icon">🔗</div>
                     <div class="process-content">
                         <h3>Converts links</h3>
-                        <p>Transforms <code>[text](file.md)</code> → <code>[[file|text]]</code></p>
+                        <p>Transforms markdown links to Obsidian wiki links</p>
+                        <div class="example">
+                            <div class="example-before">[text](file.md)</div>
+                            <div class="example-arrow">→</div>
+                            <div class="example-after">[[file|text]]</div>
+                        </div>
                     </div>
                 </div>
                 <div class="process-item">
                     <div class="process-icon">🎯</div>
                     <div class="process-content">
                         <h3>Handles duplicates</h3>
-                        <p>Uses folder context to handle files with identical names</p>
+                        <p>Uses folder context to disambiguate files with identical names</p>
+                        <div class="example">
+                            <pre>folder: "Work/Projects"</pre>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -170,7 +241,7 @@ bun install</code>
         <!-- Footer -->
         <footer class="footer">
             <div class="footer-content">
-                <p>Built with ❤️ for the Obsidian community</p>
+                <p>Built with ❤️ by <a href="https://github.com/bitbonsai" class="author-link">BitBonsai</a></p>
                 <div class="footer-links">
                     <a href="https://github.com/bitbonsai/notion2obsidian">GitHub</a>
                     <span>•</span>
