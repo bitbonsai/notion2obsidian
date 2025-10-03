@@ -65,7 +65,7 @@ function parseArgs() {
   return config;
 }
 
-function showVersion() {
+function getVersion() {
   const { readFileSync } = require('node:fs');
   const { join } = require('node:path');
   const { fileURLToPath } = require('node:url');
@@ -75,21 +75,16 @@ function showVersion() {
   const __dirname = dirname(__filename);
   const packageJson = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
 
-  console.log(`notion2obsidian v${packageJson.version}`);
+  return packageJson.version;
+}
+
+function showVersion() {
+  console.log(`notion2obsidian v${getVersion()}`);
 }
 
 function showHelp() {
-  const { readFileSync } = require('node:fs');
-  const { join } = require('node:path');
-  const { fileURLToPath } = require('node:url');
-  const { dirname } = require('node:path');
-
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-  const packageJson = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
-
   console.log(`
-${chalk.blueBright.bold('💎 Notion to Obsidian')} ${chalk.gray(`v${packageJson.version}`)}
+${chalk.blueBright.bold('💎 Notion to Obsidian')} ${chalk.gray(`v${getVersion()}`)}
 
 ${chalk.yellow('Usage:')}
   notion2obsidian [directory|zip-file] [options]
@@ -702,7 +697,7 @@ async function main() {
 
   if (isZipFile) {
     // Show header
-    console.log(chalk.cyan.bold('💎 Notion to Obsidian\n'));
+    console.log(chalk.cyan.bold('💎 Notion to Obsidian') + ' ' + chalk.gray(`v${getVersion()}`) + '\n');
 
     // Check if zip file exists
     try {
@@ -770,7 +765,7 @@ async function main() {
     }
   }
 
-  console.log(chalk.cyan.bold('💎 Notion to Obsidian'));
+  console.log(chalk.cyan.bold('💎 Notion to Obsidian') + ' ' + chalk.gray(`v${getVersion()}`));
   console.log(`Directory: ${chalk.blue(config.targetDir)}`);
   if (config.dryRun) {
     console.log(chalk.yellow.bold('Mode: DRY RUN (no changes will be made)'));
