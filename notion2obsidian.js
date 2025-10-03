@@ -636,8 +636,11 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
 }
 
 async function showExtractedDirectoryInfo(extractedDir) {
+  const fullPath = require('node:path').resolve(extractedDir);
+  const fileUrl = `file://${fullPath}`;
+
   console.log(chalk.cyan.bold('\n📁 Extracted Directory:'));
-  console.log(chalk.blue(`   ${extractedDir}`));
+  console.log(`   ${chalk.blue.underline(fileUrl)}`);
   console.log(chalk.gray('\n   You can now open this directory in Obsidian.'));
   console.log(chalk.gray(`   To remove the extracted files, run: ${chalk.white(`rm -rf "${extractedDir}"`)}\n`));
 }
@@ -1064,7 +1067,12 @@ async function main() {
   console.log(chalk.gray('   • URL-encoded links converted to wiki links'));
 
   console.log(chalk.cyan.bold('\n🎉 Your Notion export is now ready for Obsidian!'));
-  console.log(`Open directory: ${chalk.blue(basename(config.targetDir))}`);
+
+  // Create clickable file URL
+  const fullPath = require('node:path').resolve(config.targetDir);
+  const fileUrl = `file://${fullPath}`;
+  console.log(`Open directory: ${chalk.blue.underline(fileUrl)}`);
+
   console.log(chalk.yellow('\n💡 Scroll up to review the full migration summary and any warnings.'));
 
   // Show extracted directory info if zip was extracted
