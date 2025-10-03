@@ -1070,6 +1070,34 @@ async function main() {
 
   console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedDirs} directories\n`);
 
+  // Build a map of all directory transformations (old -> final)
+  const dirTransformations = new Map();
+
+  // Process in reverse order (shallowest to deepest) to build cumulative transformations
+  for (let i = dirMigrationMap.length - 1; i >= 0; i--) {
+    const dir = dirMigrationMap[i];
+    let finalPath = dir.newPath;
+
+    // Apply parent transformations to this directory's new path
+    for (const [oldParent, newParent] of dirTransformations) {
+      if (finalPath.startsWith(oldParent + '/')) {
+        finalPath = finalPath.replace(oldParent + '/', newParent + '/');
+      }
+    }
+
+    dirTransformations.set(dir.oldPath, finalPath);
+  }
+
+  // Update file paths to reflect all directory renames
+  for (const file of filesToRename) {
+    for (const [oldDir, newDir] of dirTransformations) {
+      if (file.newPath.startsWith(oldDir + '/')) {
+        file.newPath = file.newPath.replace(oldDir + '/', newDir + '/');
+        break; // Only apply the most specific (deepest) transformation
+      }
+    }
+  }
+
   // Step 4: Move markdown files into attachment folders if they exist
   console.log(chalk.green('Step 4: Organizing files with attachments...'));
 
