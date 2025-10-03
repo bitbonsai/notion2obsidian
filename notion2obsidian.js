@@ -1160,6 +1160,141 @@ async function main() {
 
   console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedDirs} directories\n`);
 
+  // Step 4: Normalize all images and references
+  const { readdir } = await import('node:fs/promises');
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico'];
+
+  // Step 4a: Normalize ALL image files in ALL directories
+  console.log(chalk.green('Step 4a: Normalizing all image files...'));
+
+  let normalizedImages = 0;
+
+  // Get all directories
+  const allDirs = [config.targetDir];
+  const { Glob } = await import('bun');
+  const dirGlob = new Glob('**/', { onlyFiles: false });
+  for (const dir of dirGlob.scanSync(config.targetDir)) {
+    allDirs.push(join(config.targetDir, dir));
+  }
+
+  // Normalize images in each directory
+  for (const dir of allDirs) {
+    try {
+      const filesInDir = await readdir(dir);
+
+      for (const fileName of filesInDir) {
+        const ext = extname(fileName).toLowerCase();
+        if (imageExtensions.includes(ext)) {
+          const nameWithoutExt = basename(fileName, extname(fileName));
+          const normalizedName = nameWithoutExt
+            .replace(/\s+/g, '-')
+            .toLowerCase() + ext;
+
+          if (fileName !== normalizedName) {
+            const originalPath = join(dir, fileName);
+            const normalizedPath = join(dir, normalizedName);
+
+            // Check if normalized path already exists
+            if (await stat(normalizedPath).catch(() => false)) {
+              let counter = 1;
+              let altName = `${basename(normalizedName, ext)}-${counter}${ext}`;
+              while (await stat(join(dir, altName)).catch(() => false)) {
+                counter++;
+                altName = `${basename(normalizedName, ext)}-${counter}${ext}`;
+              }
+              await rename(originalPath, join(dir, altName));
+              normalizedImages++;
+            } else {
+              await rename(originalPath, normalizedPath);
+              normalizedImages++;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      // Skip if can't read directory
+    }
+  }
+
+  console.log(`  ${chalk.green('✓')} Normalized ${normalizedImages} image files\n`);
+
+  // Step 4b: Update all image references (cross-folder references)
+  console.log(chalk.green('Step 4b: Normalizing all image references...'));
+
+  // Build a map of old folder names → new folder names (without Notion IDs)
+  const folderNameMap = new Map();
+  for (const dir of dirMigrationMap) {
+    const oldName = basename(dir.oldPath);
+    const newName = basename(dir.newPath);
+    folderNameMap.set(oldName, newName);
+  }
+
+  let updatedReferences = 0;
+
+  // Process all MD files
+  const glob = new Glob('**/*.md');
+  const allMdFiles = Array.from(glob.scanSync(config.targetDir));
+
+  for (const mdFile of allMdFiles) {
+    const mdPath = join(config.targetDir, mdFile);
+    let content = await Bun.file(mdPath).text();
+    let modified = false;
+
+    const updatedContent = content.replace(
+      /(!?\[[^\]]*\]\()([^)]+)(\))/g,
+      (match, prefix, path, suffix) => {
+        // Skip external URLs
+        if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('mailto:')) {
+          return match;
+        }
+        // Skip wiki links
+        if (match.startsWith('[[')) {
+          return match;
+        }
+
+        // Decode URL-encoded paths
+        const decodedPath = decodeURIComponent(path);
+        const pathParts = decodedPath.split('/');
+
+        // Check if this is an image reference
+        const fileName = pathParts[pathParts.length - 1];
+        const ext = extname(fileName).toLowerCase();
+
+        if (imageExtensions.includes(ext)) {
+          // Normalize image filename
+          const nameWithoutExt = basename(fileName, extname(fileName));
+          const normalizedFileName = nameWithoutExt
+            .replace(/\s+/g, '-')
+            .toLowerCase() + ext;
+
+          // Update folder paths if needed
+          const updatedPathParts = pathParts.slice(0, -1).map(part => {
+            // Check if this folder was renamed (remove Notion ID)
+            return folderNameMap.get(part) || part;
+          });
+
+          // Rebuild path
+          updatedPathParts.push(normalizedFileName);
+          const newPath = updatedPathParts.join('/');
+
+          if (newPath !== path) {
+            modified = true;
+            updatedReferences++;
+            return `${prefix}${newPath}${suffix}`;
+          }
+        }
+
+        return match;
+      }
+    );
+
+    if (modified) {
+      await Bun.write(mdPath, updatedContent);
+    }
+  }
+
+  console.log(`  ${chalk.green('✓')} Normalized ${updatedReferences} image references\n`);
+
   // Final summary
   console.log(chalk.green.bold('✅ Migration complete!\n'));
   console.log(chalk.white('Summary:'));
