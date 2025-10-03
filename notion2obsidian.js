@@ -1007,119 +1007,35 @@ async function main() {
 
   console.log(`  ${chalk.green('✓')} Processed ${stats.processedFiles} files, converted ${stats.totalLinks} links\n`);
 
-  // Step 2: Rename files
-  console.log(chalk.green('Step 2: Renaming files...'));
-
-  for (let i = 0; i < filesToRename.length; i++) {
-    const file = filesToRename[i];
-    try {
-      // Check if target already exists
-      if (await stat(file.newPath).catch(() => false)) {
-        // File exists - create alternative name
-        const ext = extname(file.newPath);
-        const nameWithoutExt = basename(file.newPath, ext);
-        const dir = dirname(file.newPath);
-        let counter = 1;
-        let alternativePath = join(dir, `${nameWithoutExt}-${counter}${ext}`);
-        while (await stat(alternativePath).catch(() => false)) {
-          counter++;
-          alternativePath = join(dir, `${nameWithoutExt}-${counter}${ext}`);
-        }
-        await rename(file.oldPath, alternativePath);
-        stats.addNamingConflict(file.oldPath, `Target exists, renamed to ${basename(alternativePath)}`);
-        stats.renamedFiles++;
-      } else {
-        await rename(file.oldPath, file.newPath);
-        stats.renamedFiles++;
-      }
-    } catch (err) {
-      stats.addNamingConflict(file.oldPath, err.message);
-    }
-  }
-
-  console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedFiles} files\n`);
-
-  // Step 3: Rename directories
-  console.log(chalk.green('Step 3: Renaming directories...'));
-
-  for (let i = 0; i < dirMigrationMap.length; i++) {
-    const dir = dirMigrationMap[i];
-    try {
-      // Check if target already exists
-      if (await stat(dir.newPath).catch(() => false)) {
-        // Directory exists - create alternative name
-        const dirName = basename(dir.newPath);
-        const parentDir = dirname(dir.newPath);
-        let counter = 1;
-        let alternativePath = join(parentDir, `${dirName}-${counter}`);
-        while (await stat(alternativePath).catch(() => false)) {
-          counter++;
-          alternativePath = join(parentDir, `${dirName}-${counter}`);
-        }
-        await rename(dir.oldPath, alternativePath);
-        stats.addNamingConflict(dir.oldPath, `Target exists, renamed to ${basename(alternativePath)}`);
-        stats.renamedDirs++;
-      } else {
-        await rename(dir.oldPath, dir.newPath);
-        stats.renamedDirs++;
-      }
-    } catch (err) {
-      stats.addNamingConflict(dir.oldPath, err.message);
-    }
-  }
-
-  console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedDirs} directories\n`);
-
-  // Build a map of all directory transformations (old -> final)
-  const dirTransformations = new Map();
-
-  // Process in reverse order (shallowest to deepest) to build cumulative transformations
-  for (let i = dirMigrationMap.length - 1; i >= 0; i--) {
-    const dir = dirMigrationMap[i];
-    let finalPath = dir.newPath;
-
-    // Apply parent transformations to this directory's new path
-    for (const [oldParent, newParent] of dirTransformations) {
-      if (finalPath.startsWith(oldParent + '/')) {
-        finalPath = finalPath.replace(oldParent + '/', newParent + '/');
-      }
-    }
-
-    dirTransformations.set(dir.oldPath, finalPath);
-  }
-
-  // Update file paths to reflect all directory renames
-  for (const file of filesToRename) {
-    for (const [oldDir, newDir] of dirTransformations) {
-      if (file.newPath.startsWith(oldDir + '/')) {
-        file.newPath = file.newPath.replace(oldDir + '/', newDir + '/');
-        break; // Only apply the most specific (deepest) transformation
-      }
-    }
-  }
-
-  // Step 4: Move markdown files into attachment folders if they exist
-  console.log(chalk.green('Step 4: Organizing files with attachments...'));
+  // Step 2: Organize attachments (before renaming, while names still match!)
+  console.log(chalk.green('Step 2: Organizing files with attachments...'));
 
   let movedFiles = 0;
-  const movedFilesMap = new Map(); // Track which files were moved
+  const filesMovedIntoFolders = new Set(); // Track which files were moved
 
-  for (const file of filesToRename) {
-    const mdFile = file.newPath;
+  for (const file of fileMigrationMap) {
+    const mdFile = file.oldPath; // Use original path (still has Notion ID)
     const mdFileBase = basename(mdFile, '.md');
     const mdFileDir = dirname(mdFile);
     const potentialAttachmentFolder = join(mdFileDir, mdFileBase);
 
     try {
-      // Check if there's a folder with the same name as the .md file (without extension)
+      // Check if there's a folder with the same name as the .md file (both have Notion IDs)
       const folderStats = await stat(potentialAttachmentFolder).catch(() => null);
 
       if (folderStats && folderStats.isDirectory()) {
-        // Move the .md file into its attachment folder
-        const newMdPath = join(potentialAttachmentFolder, basename(mdFile));
+        // Move the .md file into its attachment folder AND rename it (remove Notion ID)
+        const newMdPath = join(potentialAttachmentFolder, file.newName);
         await rename(mdFile, newMdPath);
         movedFiles++;
-        movedFilesMap.set(mdFile, newMdPath);
+        if (file.needsRename) {
+          stats.renamedFiles++; // Count file renames
+        }
+        filesMovedIntoFolders.add(file.oldPath);
+
+        // Update file paths in the migration map
+        file.oldPath = newMdPath;
+        file.newPath = newMdPath; // Already at final name
 
         // Update image paths in the file to be relative (just filenames)
         const content = await Bun.file(newMdPath).text();
@@ -1151,11 +1067,42 @@ async function main() {
         await Bun.write(newMdPath, updatedContent);
       }
     } catch (err) {
-      // Silently skip if folder doesn't exist or any other error
+      stats.addNamingConflict(file.oldPath, `Error organizing attachments: ${err.message}`);
     }
   }
 
   console.log(`  ${chalk.green('✓')} Moved ${movedFiles} files into their attachment folders\n`);
+
+  // Step 3: Rename directories (deepest first to avoid path conflicts)
+  console.log(chalk.green('Step 3: Renaming directories...'));
+
+  for (let i = 0; i < dirMigrationMap.length; i++) {
+    const dir = dirMigrationMap[i];
+    try {
+      // Check if target already exists
+      if (await stat(dir.newPath).catch(() => false)) {
+        // Directory exists - create alternative name
+        const dirName = basename(dir.newPath);
+        const parentDir = dirname(dir.newPath);
+        let counter = 1;
+        let alternativePath = join(parentDir, `${dirName}-${counter}`);
+        while (await stat(alternativePath).catch(() => false)) {
+          counter++;
+          alternativePath = join(parentDir, `${dirName}-${counter}`);
+        }
+        await rename(dir.oldPath, alternativePath);
+        stats.addNamingConflict(dir.oldPath, `Target exists, renamed to ${basename(alternativePath)}`);
+        stats.renamedDirs++;
+      } else {
+        await rename(dir.oldPath, dir.newPath);
+        stats.renamedDirs++;
+      }
+    } catch (err) {
+      stats.addNamingConflict(dir.oldPath, err.message);
+    }
+  }
+
+  console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedDirs} directories\n`);
 
   // Final summary
   console.log(chalk.green.bold('✅ Migration complete!\n'));
