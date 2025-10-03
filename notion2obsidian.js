@@ -671,6 +671,9 @@ async function main() {
   const isZipFile = config.targetDir.toLowerCase().endsWith('.zip');
 
   if (isZipFile) {
+    // Show header
+    console.log(chalk.cyan.bold('💎 Notion to Obsidian\n'));
+
     // Check if zip file exists
     try {
       await stat(config.targetDir);
@@ -737,7 +740,7 @@ async function main() {
     }
   }
 
-  console.log(chalk.cyan.bold('📦 Notion to Obsidian'));
+  console.log(chalk.cyan.bold('💎 Notion to Obsidian'));
   console.log(`Directory: ${chalk.blue(config.targetDir)}`);
   if (config.dryRun) {
     console.log(chalk.yellow.bold('Mode: DRY RUN (no changes will be made)'));
