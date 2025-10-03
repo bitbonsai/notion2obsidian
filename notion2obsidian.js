@@ -1254,10 +1254,12 @@ async function main() {
   for (const mdFile of allMdFiles) {
     const mdPath = join(config.targetDir, mdFile);
     const mdDir = dirname(mdPath);
-    let content = await Bun.file(mdPath).text();
-    let modified = false;
+    const content = await Bun.file(mdPath).text();
 
-    // Parse markdown to AST
+    // Track modifications
+    let hasChanges = false;
+
+    // Parse markdown to AST and transform
     const processor = unified()
       .use(remarkParse.default)
       .use(() => (tree) => {
@@ -1314,7 +1316,7 @@ async function main() {
 
             if (newUrl !== url) {
               node.url = newUrl;
-              modified = true;
+              hasChanges = true;
               updatedReferences++;
             }
           }
@@ -1322,9 +1324,13 @@ async function main() {
       })
       .use(remarkStringify.default);
 
-    if (modified) {
-      const result = await processor.process(content);
-      await Bun.write(mdPath, String(result));
+    // Always process to run the transformations
+    const result = await processor.process(content);
+    const newContent = String(result);
+
+    // Only write if content actually changed
+    if (newContent !== content) {
+      await Bun.write(mdPath, newContent);
     }
   }
 
