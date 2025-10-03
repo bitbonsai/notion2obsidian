@@ -615,7 +615,8 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
       const potentialSubdir = join(extractDir, entries[0]);
       const subdirStat = await stat(potentialSubdir).catch(() => null);
       if (subdirStat?.isDirectory()) {
-        console.log(chalk.gray(`Using subdirectory: ${entries[0]}\n`));
+        console.log(chalk.gray(`Found subdirectory inside zip: ${entries[0]}`));
+        console.log(chalk.gray(`Working directory: ${extractDir}\n`));
         return {
           path: potentialSubdir,
           extractDir, // Return parent for cleanup
