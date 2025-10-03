@@ -79,12 +79,12 @@ function getVersion() {
 }
 
 function showVersion() {
-  console.log(`${chalk.cyan.bold('💎 Notion 2 Obsidian')} ${chalk.gray(`v${getVersion()}`)}`);
+  console.log(`${chalk.blueBright.bold('💎 Notion 2 Obsidian')} ${chalk.gray(`v${getVersion()}`)}`);
 }
 
 function showHelp() {
   console.log(`
-${chalk.cyan.bold('💎 Notion 2 Obsidian')} ${chalk.gray(`v${getVersion()}`)}
+${chalk.blueBright.bold('💎 Notion 2 Obsidian')} ${chalk.gray(`v${getVersion()}`)}
 
 ${chalk.yellow('Usage:')}
   notion2obsidian [directory|zip-file] [options]
@@ -703,7 +703,7 @@ async function main() {
 
   if (isZipFile) {
     // Show header
-    console.log(chalk.cyan.bold('💎 Notion 2 Obsidian') + ' ' + chalk.gray(`v${getVersion()}`) + '\n');
+    console.log(chalk.blueBright.bold('💎 Notion 2 Obsidian') + ' ' + chalk.gray(`v${getVersion()}`) + '\n');
 
     // Check if zip file exists
     try {
@@ -771,7 +771,7 @@ async function main() {
     }
   }
 
-  console.log(chalk.cyan.bold('💎 Notion 2 Obsidian') + ' ' + chalk.gray(`v${getVersion()}`));
+  console.log(chalk.blueBright.bold('💎 Notion 2 Obsidian') + ' ' + chalk.gray(`v${getVersion()}`));
   console.log(`Directory: ${chalk.blue(config.targetDir)}`);
   if (config.dryRun) {
     console.log(chalk.yellow.bold('Mode: DRY RUN (no changes will be made)'));
