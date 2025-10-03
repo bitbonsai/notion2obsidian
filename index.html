@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>notion2obsidian - Fast Notion to Obsidian Migration</title>
+    <meta name="description" content="A high-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format. Fast, clean, and simple.">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Hero Section -->
+        <header class="hero">
+            <div class="hero-content">
+                <div class="badge">💎 v2.2.1</div>
+                <h1 class="title">
+                    <span class="gradient-text">notion2obsidian</span>
+                </h1>
+                <p class="subtitle">
+                    Migrate your Notion exports to Obsidian in seconds.<br>
+                    Fast, clean, and simple.
+                </p>
+                <div class="cta-buttons">
+                    <a href="https://github.com/bitbonsai/notion2obsidian" class="btn btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        View on GitHub
+                    </a>
+                    <a href="#install" class="btn btn-secondary">Get Started →</a>
+                </div>
+            </div>
+
+            <!-- Terminal Demo -->
+            <div class="terminal">
+                <div class="terminal-header">
+                    <div class="terminal-buttons">
+                        <span class="btn-close"></span>
+                        <span class="btn-minimize"></span>
+                        <span class="btn-maximize"></span>
+                    </div>
+                    <div class="terminal-title">notion2obsidian</div>
+                </div>
+                <div class="terminal-body">
+                    <div class="terminal-line">
+                        <span class="prompt">$</span>
+                        <span class="command">./notion2obsidian.js ./Export-abc123.zip</span>
+                    </div>
+                    <div class="terminal-line output">
+                        <span class="gem">💎</span> Notion to Obsidian
+                    </div>
+                    <div class="terminal-line output">
+                        <span class="package">📦</span> Extracting zip file...
+                    </div>
+                    <div class="terminal-line output success">
+                        ✓ Extracted 2088 files
+                    </div>
+                    <div class="terminal-line output">
+                        Found <span class="highlight">542</span> markdown files
+                    </div>
+                    <div class="terminal-line output success">
+                        ✅ Migration complete!
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Features Grid -->
+        <section class="features">
+            <h2 class="section-title">Why notion2obsidian?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Lightning Fast</h3>
+                    <p>Batch processing with concurrent operations. Process thousands of files in seconds.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h3>Direct Zip Support</h3>
+                    <p>Extract and migrate zip files in one command. No manual extraction needed.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <h3>Smart Link Conversion</h3>
+                    <p>Automatically converts markdown links to Obsidian wiki links with anchor support.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏷️</div>
+                    <h3>Auto-tagging</h3>
+                    <p>Generates tags from your folder structure automatically.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Dry Run Mode</h3>
+                    <p>Preview changes before applying them with smart sampling for large exports.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Clean Output</h3>
+                    <p>Minimal, focused output. No unnecessary progress bars or backups cluttering your workspace.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Installation -->
+        <section id="install" class="install">
+            <h2 class="section-title">Get Started</h2>
+            <div class="install-grid">
+                <div class="install-step">
+                    <div class="step-number">1</div>
+                    <h3>Install Bun</h3>
+                    <div class="code-block">
+                        <code>curl -fsSL https://bun.sh/install | bash</code>
+                    </div>
+                </div>
+                <div class="install-step">
+                    <div class="step-number">2</div>
+                    <h3>Clone & Install</h3>
+                    <div class="code-block">
+                        <code>git clone https://github.com/bitbonsai/notion2obsidian.git<br>
+cd notion2obsidian<br>
+bun install</code>
+                    </div>
+                </div>
+                <div class="install-step">
+                    <div class="step-number">3</div>
+                    <h3>Run Migration</h3>
+                    <div class="code-block">
+                        <code>./notion2obsidian.js ./Export-abc123.zip</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- What it does -->
+        <section class="what-it-does">
+            <h2 class="section-title">What it does</h2>
+            <div class="process-list">
+                <div class="process-item">
+                    <div class="process-icon">🧹</div>
+                    <div class="process-content">
+                        <h3>Cleans filenames</h3>
+                        <p>Removes 32-character Notion IDs from files and directories</p>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-icon">📝</div>
+                    <div class="process-content">
+                        <h3>Adds frontmatter</h3>
+                        <p>Generates YAML metadata including title, tags, aliases, and Notion IDs</p>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-icon">🔗</div>
+                    <div class="process-content">
+                        <h3>Converts links</h3>
+                        <p>Transforms <code>[text](file.md)</code> → <code>[[file|text]]</code></p>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-icon">🎯</div>
+                    <div class="process-content">
+                        <h3>Handles duplicates</h3>
+                        <p>Uses folder context to handle files with identical names</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>Built with ❤️ for the Obsidian community</p>
+                <div class="footer-links">
+                    <a href="https://github.com/bitbonsai/notion2obsidian">GitHub</a>
+                    <span>•</span>
+                    <a href="https://github.com/bitbonsai/notion2obsidian/issues">Issues</a>
+                    <span>•</span>
+                    <a href="https://github.com/bitbonsai/notion2obsidian/blob/main/README.md">Documentation</a>
+                </div>
+                <p class="tech-stack">
+                    Powered by <a href="https://bun.sh">Bun</a> •
+                    <a href="https://github.com/chalk/chalk">Chalk</a> •
+                    <a href="https://github.com/101arrowz/fflate">fflate</a>
+                </p>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
