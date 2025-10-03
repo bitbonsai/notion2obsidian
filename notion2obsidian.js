@@ -936,6 +936,7 @@ async function main() {
   if (config.dryRun) {
     console.log(chalk.green.bold('\n✅ Dry run complete! No changes were made.'));
     console.log(chalk.gray('Run without --dry-run to apply changes.'));
+    console.log(chalk.yellow('\n💡 Scroll up to review the migration preview and sample frontmatter.'));
 
     // Handle temp directory cleanup if zip was extracted
     if (extractedTempDir) {
@@ -1060,6 +1061,7 @@ async function main() {
 
   console.log(chalk.cyan.bold('\n🎉 Your Notion export is now ready for Obsidian!'));
   console.log(`Open directory: ${chalk.blue(basename(config.targetDir))}`);
+  console.log(chalk.yellow('\n💡 Scroll up to review the full migration summary and any warnings.'));
 
   // Show extracted directory info if zip was extracted
   if (extractedTempDir) {
