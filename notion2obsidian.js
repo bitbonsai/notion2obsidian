@@ -1232,8 +1232,8 @@ async function main() {
   let updatedReferences = 0;
 
   // Process all MD files
-  const glob = new Glob('**/*.md');
-  const allMdFiles = Array.from(glob.scanSync(config.targetDir));
+  const mdGlob = new Glob('**/*.md');
+  const allMdFiles = Array.from(mdGlob.scanSync(config.targetDir));
 
   for (const mdFile of allMdFiles) {
     const mdPath = join(config.targetDir, mdFile);
