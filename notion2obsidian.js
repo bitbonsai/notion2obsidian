@@ -637,10 +637,9 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
 
 async function showExtractedDirectoryInfo(extractedDir) {
   const fullPath = require('node:path').resolve(extractedDir);
-  const fileUrl = `file://${fullPath}`;
 
   console.log(chalk.cyan.bold('\n📁 Extracted Directory:'));
-  console.log(`   ${chalk.blue.underline(fileUrl)}`);
+  console.log(`   ${chalk.blue(fullPath)}`);
   console.log(chalk.gray('\n   You can now open this directory in Obsidian.'));
   console.log(chalk.gray(`   To remove the extracted files, run: ${chalk.white(`rm -rf "${extractedDir}"`)}\n`));
 }
