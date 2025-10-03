@@ -1240,15 +1240,12 @@ async function main() {
     let content = await Bun.file(mdPath).text();
     let modified = false;
 
+    // First pass: Update image references (handle complex alt text with nested brackets)
     const updatedContent = content.replace(
-      /(!?\[[^\]]*\]\()([^)]+)(\))/g,
-      (match, prefix, path, suffix) => {
+      /!\[([^\]]*(?:\[[^\]]*\][^\]]*)*)\]\(([^)]+)\)/g,
+      (match, altText, path) => {
         // Skip external URLs
         if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('mailto:')) {
-          return match;
-        }
-        // Skip wiki links
-        if (match.startsWith('[[')) {
           return match;
         }
 
@@ -1280,7 +1277,7 @@ async function main() {
           if (newPath !== path) {
             modified = true;
             updatedReferences++;
-            return `${prefix}${newPath}${suffix}`;
+            return `![${altText}](${newPath})`;
           }
         }
 
