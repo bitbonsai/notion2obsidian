@@ -79,7 +79,7 @@ function getVersion() {
 }
 
 function showVersion() {
-  console.log(`notion2obsidian v${getVersion()}`);
+  console.log(`${chalk.cyan.bold('💎 Notion 2 Obsidian')} ${chalk.gray(`v${getVersion()}`)}`);
 }
 
 function showHelp() {
