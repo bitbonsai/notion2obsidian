@@ -1068,10 +1068,9 @@ async function main() {
 
   console.log(chalk.cyan.bold('\n🎉 Your Notion export is now ready for Obsidian!'));
 
-  // Create clickable file URL
+  // Show directory path
   const fullPath = require('node:path').resolve(config.targetDir);
-  const fileUrl = `file://${fullPath}`;
-  console.log(`Open directory: ${chalk.blue.underline(fileUrl)}`);
+  console.log(`Open directory: ${chalk.blue(fullPath)}`);
 
   console.log(chalk.yellow('\n💡 Scroll up to review the full migration summary and any warnings.'));
 
