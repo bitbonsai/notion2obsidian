@@ -276,7 +276,7 @@ function generateFrontmatter(metadata, relativePath) {
     lines.push(`tags: [${metadata.tags.join(', ')}]`);
   }
   if (metadata.aliases && metadata.aliases.length > 0) {
-    lines.push(`aliases:`);
+    lines.push(`notion-alias:`);
     metadata.aliases.forEach(alias => {
       lines.push(`  - "${escapeYamlString(alias)}"`);
     });
