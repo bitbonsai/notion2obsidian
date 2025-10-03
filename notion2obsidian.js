@@ -1039,6 +1039,8 @@ async function main() {
 
         // Update image paths in the file to be relative (just filenames)
         const content = await Bun.file(newMdPath).text();
+        const cleanedFolderName = basename(file.newName, '.md'); // Cleaned name without Notion ID
+
         const updatedContent = content.replace(
           /(!?\[[^\]]*\]\()([^)]+)(\))/g,
           (match, prefix, path, suffix) => {
@@ -1053,11 +1055,15 @@ async function main() {
             // Decode URL-encoded paths
             const decodedPath = decodeURIComponent(path);
 
-            // If path contains the folder name, extract just the filename
+            // If path contains the folder name (either with or without Notion ID), extract just the filename
             const pathParts = decodedPath.split('/');
-            if (pathParts.length > 1 && pathParts[pathParts.length - 2] === mdFileBase) {
-              // This is an attachment in our folder, use just the filename
-              return `${prefix}${pathParts[pathParts.length - 1]}${suffix}`;
+            if (pathParts.length > 1) {
+              const folderInPath = pathParts[pathParts.length - 2];
+              // Check if it matches either the original name with ID or the cleaned name
+              if (folderInPath === mdFileBase || folderInPath === cleanedFolderName) {
+                // This is an attachment in our folder, use just the filename
+                return `${prefix}${pathParts[pathParts.length - 1]}${suffix}`;
+              }
             }
 
             return match;
