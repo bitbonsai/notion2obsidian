@@ -50,6 +50,9 @@ function parseArgs() {
       config.dryRun = true;
     } else if (arg === '--verbose' || arg === '-v') {
       config.verbose = true;
+    } else if (arg === '--version' || arg === '-V') {
+      showVersion();
+      process.exit(0);
     } else if (arg === '--help' || arg === '-h') {
       showHelp();
       process.exit(0);
@@ -62,9 +65,31 @@ function parseArgs() {
   return config;
 }
 
+function showVersion() {
+  const { readFileSync } = require('node:fs');
+  const { join } = require('node:path');
+  const { fileURLToPath } = require('node:url');
+  const { dirname } = require('node:path');
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const packageJson = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
+
+  console.log(`notion2obsidian v${packageJson.version}`);
+}
+
 function showHelp() {
+  const { readFileSync } = require('node:fs');
+  const { join } = require('node:path');
+  const { fileURLToPath } = require('node:url');
+  const { dirname } = require('node:path');
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const packageJson = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
+
   console.log(`
-${chalk.blueBright.bold('💎 Notion to Obsidian')}
+${chalk.blueBright.bold('💎 Notion to Obsidian')} ${chalk.gray(`v${packageJson.version}`)}
 
 ${chalk.yellow('Usage:')}
   notion2obsidian [directory|zip-file] [options]
@@ -73,6 +98,7 @@ ${chalk.yellow('Options:')}
   -d, --dry-run       Preview changes without modifying files
                       (extracts 10% sample or 10MB max for zip files)
   -v, --verbose       Show detailed processing information
+  -V, --version       Show version number
   -h, --help          Show this help message
 
 ${chalk.yellow('Examples:')}
@@ -87,6 +113,7 @@ ${chalk.blueBright('Features:')}
   • Adds YAML frontmatter with metadata
   • Converts markdown links to wiki links
   • Handles duplicate filenames with folder context
+  • Organizes attachments in folders with simplified paths
 `);
 }
 
