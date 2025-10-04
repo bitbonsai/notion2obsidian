@@ -14,9 +14,18 @@ This is a high-performance CLI tool that migrates Notion exports to Obsidian-com
 # Basic migration (current directory)
 ./notion2obsidian.js
 
-# Migrate specific directory or zip file
-./notion2obsidian.js ./my-notion-export
+# Single zip file
 ./notion2obsidian.js ./Export-abc123.zip
+
+# Multiple zip files with glob patterns
+./notion2obsidian.js *.zip
+./notion2obsidian.js Export-*.zip
+
+# Multiple zip files with custom output
+./notion2obsidian.js *.zip -o ~/Obsidian/Notion-Import
+
+# Directory processing with output
+./notion2obsidian.js ./my-notion-export -o ~/Documents/Obsidian
 
 # Using bun directly
 bun run notion2obsidian.js ./my-export
@@ -28,6 +37,7 @@ bun run dry-run ./my-export
 
 ### Command line options
 
+- `-o, --output DIR` - Output directory for processed files (default: extract location)
 - `-d, --dry-run` - Preview changes without modifying files (extracts 10% sample or 10MB max for zip files)
 - `-v, --verbose` - Show detailed processing information
 - `-h, --help` - Show help message

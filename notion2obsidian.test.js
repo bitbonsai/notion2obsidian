@@ -6,7 +6,7 @@ import { describe, test, expect } from "bun:test";
 const PATTERNS = {
   hexId: /^[0-9a-fA-F]{32}$/,
   mdLink: /\[([^\]]+)\]\(([^)]+\.md)\)/g,
-  frontmatter: /^\uFEFF?\s*---\s*\n/,
+  frontmatter: /^\uFEFF?\s*---\s*\n/,  // Only accept --- delimiters (Obsidian requirement)
   notionIdExtract: /\s([0-9a-fA-F]{32})(?:\.[^.]+)?$/
 };
 
@@ -109,7 +109,7 @@ describe("Windows Filename Sanitization", () => {
 });
 
 describe("Frontmatter Detection", () => {
-  test("should detect standard frontmatter", () => {
+  test("should detect standard frontmatter with ---", () => {
     expect(PATTERNS.frontmatter.test("---\ntitle: Test")).toBe(true);
   });
 
@@ -119,6 +119,11 @@ describe("Frontmatter Detection", () => {
 
   test("should detect frontmatter with whitespace", () => {
     expect(PATTERNS.frontmatter.test("  ---  \ntitle: Test")).toBe(true);
+  });
+
+  test("should NOT accept ___ or *** delimiters (Obsidian requires ---)", () => {
+    expect(PATTERNS.frontmatter.test("___\ntitle: Test")).toBe(false);
+    expect(PATTERNS.frontmatter.test("***\ntitle: Test")).toBe(false);
   });
 
   test("should not match non-frontmatter", () => {
@@ -337,4 +342,272 @@ Reference [Tasks](Tasks%20111222333444555666777888999000ef.md).
     await rm(extractDir, { recursive: true, force: true });
     await rm(zipPath, { force: true });
   }, 30000); // 30 second timeout for this test
+});
+
+// ============================================================================
+// Gray-Matter Based Frontmatter Tests
+// ============================================================================
+
+// Import gray-matter for testing
+import matter from "gray-matter";
+
+// Duplicate the new frontmatter functions for testing
+function hasValidFrontmatter(content) {
+  const cleanContent = content.replace(/^\uFEFF/, '');
+  return cleanContent.trimStart().startsWith('---\n');
+}
+
+function parseFrontmatter(content) {
+  try {
+    const cleanContent = content.replace(/^\uFEFF/, '');
+    const parsed = matter(cleanContent);
+    return {
+      data: parsed.data || {},
+      content: parsed.content || '',
+      hasFrontmatter: Object.keys(parsed.data || {}).length > 0
+    };
+  } catch (error) {
+    return {
+      data: {},
+      content: content.replace(/^\uFEFF/, ''),
+      hasFrontmatter: false
+    };
+  }
+}
+
+function generateValidFrontmatter(metadata, relativePath) {
+  const frontmatterData = {};
+
+  if (metadata.title) frontmatterData.title = metadata.title;
+  if (metadata.tags && metadata.tags.length > 0) {
+    frontmatterData.tags = metadata.tags;
+  }
+  if (metadata.aliases && metadata.aliases.length > 0) {
+    frontmatterData.aliases = metadata.aliases;
+  }
+  if (metadata.notionId) frontmatterData['notion-id'] = metadata.notionId;
+  if (relativePath && relativePath !== '.') {
+    frontmatterData.folder = relativePath;
+  }
+  if (metadata.status) frontmatterData.status = metadata.status;
+  if (metadata.owner) frontmatterData.owner = metadata.owner;
+  if (metadata.dates) frontmatterData.dates = metadata.dates;
+  if (metadata.priority) frontmatterData.priority = metadata.priority;
+  if (metadata.completion !== undefined) frontmatterData.completion = metadata.completion;
+  if (metadata.summary) frontmatterData.summary = metadata.summary;
+
+  frontmatterData.published = false;
+
+  try {
+    const result = matter.stringify('', frontmatterData);
+    const frontmatterMatch = result.match(/^---\n([\s\S]*?)\n---\n$/);
+    if (frontmatterMatch) {
+      return `---\n${frontmatterMatch[1]}\n---`;
+    }
+    return generateFallbackFrontmatter(frontmatterData);
+  } catch (error) {
+    return generateFallbackFrontmatter(frontmatterData);
+  }
+}
+
+function generateFallbackFrontmatter(data) {
+  const lines = ['---'];
+  for (const [key, value] of Object.entries(data)) {
+    if (Array.isArray(value)) {
+      lines.push(`${key}:`);
+      value.forEach(item => {
+        lines.push(`  - ${JSON.stringify(item)}`);
+      });
+    } else {
+      lines.push(`${key}: ${JSON.stringify(value)}`);
+    }
+  }
+  lines.push('---');
+  return lines.join('\n');
+}
+
+function validateFrontmatter(frontmatterString) {
+  try {
+    const parsed = matter(`${frontmatterString}\n\ntest content`);
+    return parsed.data && typeof parsed.data === 'object';
+  } catch (error) {
+    return false;
+  }
+}
+
+describe("Gray-Matter Frontmatter Validation", () => {
+  test("should detect valid frontmatter", () => {
+    expect(hasValidFrontmatter("---\ntitle: Test\n---\n\nContent")).toBe(true);
+  });
+
+  test("should detect frontmatter with BOM", () => {
+    expect(hasValidFrontmatter("\uFEFF---\ntitle: Test\n---\n\nContent")).toBe(true);
+  });
+
+  test("should reject invalid frontmatter delimiters", () => {
+    expect(hasValidFrontmatter("***\ntitle: Test\n***\n\nContent")).toBe(false);
+    expect(hasValidFrontmatter("___\ntitle: Test\n___\n\nContent")).toBe(false);
+  });
+
+  test("should reject content without frontmatter", () => {
+    expect(hasValidFrontmatter("# Title\n\nContent")).toBe(false);
+  });
+});
+
+describe("Gray-Matter Frontmatter Parsing", () => {
+  test("should parse valid frontmatter", () => {
+    const content = "---\ntitle: Test Note\ntags: [test, example]\n---\n\nContent here";
+    const result = parseFrontmatter(content);
+
+    expect(result.hasFrontmatter).toBe(true);
+    expect(result.data.title).toBe("Test Note");
+    expect(result.data.tags).toEqual(["test", "example"]);
+    expect(result.content.trim()).toBe("Content here");
+  });
+
+  test("should handle content without frontmatter", () => {
+    const content = "# Title\n\nJust content";
+    const result = parseFrontmatter(content);
+
+    expect(result.hasFrontmatter).toBe(false);
+    expect(result.data).toEqual({});
+    expect(result.content).toBe(content);
+  });
+
+  test("should handle BOM characters", () => {
+    const content = "\uFEFF---\ntitle: Test\n---\n\nContent";
+    const result = parseFrontmatter(content);
+
+    expect(result.hasFrontmatter).toBe(true);
+    expect(result.data.title).toBe("Test");
+  });
+
+  test("should handle malformed frontmatter gracefully", () => {
+    const content = "---\ninvalid: yaml: structure:\n---\n\nContent";
+    const result = parseFrontmatter(content);
+
+    expect(result.hasFrontmatter).toBe(false);
+    expect(result.content).toBe(content);
+  });
+});
+
+describe("Gray-Matter Frontmatter Generation", () => {
+  test("should generate valid frontmatter", () => {
+    const metadata = {
+      title: "Test Note",
+      tags: ["test", "example"],
+      notionId: "abc123def456789012345678901234ab"
+    };
+
+    const frontmatter = generateValidFrontmatter(metadata, "folder/path");
+
+    expect(frontmatter).toContain("---");
+    expect(frontmatter).toContain("title: \"Test Note\"");
+    expect(frontmatter).toContain("published: false");
+    expect(frontmatter).toContain("folder: \"folder/path\"");
+    expect(validateFrontmatter(frontmatter)).toBe(true);
+  });
+
+  test("should handle special characters in values", () => {
+    const metadata = {
+      title: "Test: Note with \"quotes\" and colons",
+      summary: "A note with special chars: @#$%"
+    };
+
+    const frontmatter = generateValidFrontmatter(metadata, ".");
+
+    expect(validateFrontmatter(frontmatter)).toBe(true);
+    expect(frontmatter).toContain("title:");
+    expect(frontmatter).toContain("summary:");
+  });
+
+  test("should handle arrays properly", () => {
+    const metadata = {
+      tags: ["tag-1", "tag with spaces", "tag:with:colons"],
+      aliases: ["alias1", "alias 2"]
+    };
+
+    const frontmatter = generateValidFrontmatter(metadata, ".");
+
+    expect(validateFrontmatter(frontmatter)).toBe(true);
+    expect(frontmatter).toContain("tags:");
+    expect(frontmatter).toContain("aliases:");
+  });
+
+  test("should set published: false by default", () => {
+    const metadata = { title: "Test" };
+    const frontmatter = generateValidFrontmatter(metadata, ".");
+
+    expect(frontmatter).toContain("published: false");
+  });
+
+  test("should handle empty metadata gracefully", () => {
+    const metadata = {};
+    const frontmatter = generateValidFrontmatter(metadata, ".");
+
+    expect(validateFrontmatter(frontmatter)).toBe(true);
+    expect(frontmatter).toContain("published: false");
+  });
+});
+
+describe("Frontmatter Validation", () => {
+  test("should validate correct YAML frontmatter", () => {
+    const validFrontmatter = `---
+title: "Test Note"
+tags:
+  - "test"
+  - "example"
+published: false
+---`;
+
+    expect(validateFrontmatter(validFrontmatter)).toBe(true);
+  });
+
+  test("should reject invalid YAML", () => {
+    const invalidFrontmatter = `---
+title: Test Note
+invalid: yaml: structure:
+  - missing quotes
+---`;
+
+    expect(validateFrontmatter(invalidFrontmatter)).toBe(false);
+  });
+
+  test("should reject malformed YAML syntax", () => {
+    const malformedFrontmatter = `---
+title: "Test"
+invalid yaml: {missing quotes and brackets
+---`;
+
+    expect(validateFrontmatter(malformedFrontmatter)).toBe(false);
+  });
+});
+
+describe("Obsidian Compatibility", () => {
+  test("should generate frontmatter that Obsidian can parse", () => {
+    const metadata = {
+      title: "Complex: Title with \"quotes\" and colons",
+      tags: ["obsidian", "notion-import", "tag with spaces"],
+      aliases: ["alias1", "alias with spaces"],
+      notionId: "abc123def456789012345678901234ab",
+      status: "In Progress",
+      owner: "John Doe",
+      completion: 75
+    };
+
+    const frontmatter = generateValidFrontmatter(metadata, "Projects/SubFolder");
+
+    // Ensure it's valid YAML
+    expect(validateFrontmatter(frontmatter)).toBe(true);
+
+    // Ensure it uses --- delimiters
+    expect(frontmatter.startsWith("---\n")).toBe(true);
+    expect(frontmatter.endsWith("\n---")).toBe(true);
+
+    // Ensure all values are properly quoted/escaped
+    const parsed = matter(`${frontmatter}\n\ntest content`);
+    expect(parsed.data.title).toBe("Complex: Title with \"quotes\" and colons");
+    expect(parsed.data.tags).toEqual(["obsidian", "notion-import", "tag with spaces"]);
+    expect(parsed.data.completion).toBe(75);
+  });
 });

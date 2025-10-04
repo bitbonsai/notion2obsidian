@@ -6,7 +6,7 @@
   A high-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format. Fast, clean, and simple.
 
   [![GitHub Stars](https://img.shields.io/github/stars/bitbonsai/notion2obsidian?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian)
-  [![Version](https://img.shields.io/badge/version-2.2.1-8250E7?style=flat&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian/releases)
+  [![Version](https://img.shields.io/badge/version-2.3.0-8250E7?style=flat&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian/releases)
   [![License](https://img.shields.io/badge/license-MIT-8250E7?style=flat&labelColor=262626)](LICENSE)
 
 </div>
@@ -14,14 +14,20 @@
 ## ✨ Features
 
 - **🚀 Performance Optimized**: Batch processing with concurrent file operations
-- **📦 Direct Zip Support**: Extract and migrate zip files in one command
+- **📦 Multiple Zip Support**: Process multiple zip files with glob patterns (*.zip)
+- **📂 Custom Output Directory**: Specify where processed files should go (-o/--output)
 - **🔍 Dry Run Mode**: Preview changes before applying them (with sampling for large zips)
 - **🔗 Smart Link Conversion**: Converts markdown links to Obsidian wiki links
 - **🏷️ Auto-tagging**: Generates tags from folder structure
 - **📝 Frontmatter Generation**: Adds YAML metadata to all files
 - **🔄 Duplicate Handling**: Intelligently disambiguates files with same names
 - **⚡ Batch Processing**: Processes files in chunks for optimal performance
-- **🎯 Clean Output**: No unnecessary progress bars or backups
+- **🎯 Automatic Directory Opening**: Automatically opens the completed migration directory
+- **🗑️ Automatic Cleanup**: Removes temporary extraction directories after successful migration
+- **📊 Database Integration**: Converts CSV database exports to Obsidian-compatible formats
+- **🔍 Dataview Support**: Creates individual notes and query-based indexes from CSV data
+- **💬 Callout Conversion**: Transforms Notion callouts to Obsidian format with icon mapping
+- **🖼️ Cover Images**: Detects and preserves Notion cover images as banner frontmatter
 
 ## 📋 What It Does
 
@@ -38,6 +44,9 @@
 5. **Processes duplicates**: Uses folder context to handle files with identical names
 6. **Renames files and directories**: Strips Notion IDs from all names
 7. **Updates asset paths**: Fixes image and file references after directory renaming
+8. **Converts callouts**: Transforms Notion callouts (with icons) to Obsidian format
+9. **Processes databases**: Converts CSV exports to markdown tables or individual notes
+10. **Preserves cover images**: Adds banner frontmatter for Notion cover images
 
 ## 🚀 Installation
 
@@ -67,26 +76,43 @@ chmod +x notion2obsidian.js
 ### Command Line Options
 
 ```bash
+-o, --output DIR    # Output directory for processed files (default: extract location)
 -d, --dry-run       # Preview changes without modifying files
                     # (extracts 10% sample or 10MB max for zip files)
 -v, --verbose       # Show detailed processing information
+    --no-callouts   # Disable Notion callout conversion to Obsidian callouts
+    --no-csv        # Disable CSV database processing and index generation
+    --dataview      # Generate Dataview-compatible CSV structure with individual notes
+    --no-banners    # Disable cover image detection and banner frontmatter
 -h, --help          # Show help message
 ```
 
 ### Examples
 
 ```bash
-# Preview changes from a zip file
-./notion2obsidian.js ./Export-abc123.zip --dry-run
-
-# Run full migration on zip file
+# Single zip file
 ./notion2obsidian.js ./Export-abc123.zip
 
-# Preview changes on extracted directory
-./notion2obsidian.js ./my-export --dry-run
+# Multiple zip files with glob pattern
+./notion2obsidian.js *.zip
 
-# Run migration on directory
-./notion2obsidian.js ./my-export
+# Multiple zip files with custom output directory
+./notion2obsidian.js *.zip -o ~/Obsidian/Notion-Import
+
+# Process specific pattern with output
+./notion2obsidian.js Export-*.zip --output ./processed
+
+# Directory processing with custom output
+./notion2obsidian.js ./my-notion-export -o ~/Documents/Obsidian
+
+# Preview changes (dry run)
+./notion2obsidian.js *.zip --dry-run
+
+# Enable Dataview-compatible CSV processing
+./notion2obsidian.js ./Export-abc123.zip --dataview
+
+# Disable specific features
+./notion2obsidian.js ./Export-abc123.zip --no-callouts --no-csv
 
 # Using npm scripts
 bun run dry-run ./Export-abc123.zip
@@ -101,6 +127,77 @@ The tool can directly process Notion zip exports:
 - **Smart sampling**: Dry-run mode extracts only 10% or 10MB for quick preview
 - **Single directory detection**: Automatically uses subdirectory if zip contains only one folder
 - **Cleanup guidance**: Shows extracted location and removal command after completion
+
+## 📊 Database & Dataview Support
+
+### CSV Database Processing
+
+When your Notion export includes CSV database files, the tool can process them in two modes:
+
+#### Traditional Mode (default)
+- Creates markdown index pages with static tables
+- Preserves original CSV files
+- Links to individual database records if they exist
+
+#### Dataview Mode (`--dataview`)
+- Creates individual markdown notes for each CSV row
+- Copies CSV files to `_databases/` folder for Dataview queries
+- Generates dynamic index pages with Dataview query blocks
+- Adds database-specific tags and frontmatter to each note
+
+### Example Dataview Output Structure
+
+```
+output/
+├── _databases/           # CSV files for Dataview queries
+│   ├── Tasks.csv
+│   └── Projects.csv
+├── Tasks/               # Individual task notes
+│   ├── add-new-task.md
+│   ├── write-proposal.md
+│   └── ...
+├── Projects/            # Individual project notes
+│   ├── website-redesign.md
+│   └── ...
+├── Tasks_Index.md       # Dataview queries for Tasks
+└── Projects_Index.md    # Dataview queries for Projects
+```
+
+### Dataview Queries Generated
+
+```dataview
+TABLE WITHOUT ID file.link as "Record", status, priority, assignee
+FROM #database/tasks
+WHERE status != "Done"
+SORT priority DESC
+```
+
+## 💬 Callout & Visual Element Support
+
+### Notion Callouts
+Converts Notion callouts with icons to Obsidian format:
+
+```markdown
+<!-- Notion format -->
+<aside>
+<img src="https://www.notion.so/icons/token_blue.svg" width="40px" />
+Important information here
+</aside>
+
+<!-- Becomes Obsidian format -->
+> [!note] 📘 Important information here
+```
+
+### Cover Images
+Detects Notion cover images and adds banner frontmatter:
+
+```yaml
+---
+title: "My Page"
+banner: "cover-image.jpg"
+published: false
+---
+```
 
 ## 📊 Sample Output
 

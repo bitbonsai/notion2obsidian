@@ -216,7 +216,7 @@
                 <article class="feature-card">
                     <div class="feature-icon">🔗</div>
                     <h3>Perfect Migration</h3>
-                    <p>Smart link conversion, auto-tagging from folders, frontmatter generation, and duplicate handling. Everything works in Obsidian from day one.</p>
+                    <p>Smart link conversion, auto-tagging, frontmatter generation, callout conversion, database processing with Dataview support, and duplicate handling. Everything works in Obsidian from day one.</p>
                 </article>
             </div>
         </section>
@@ -307,6 +307,31 @@ published: false
                             <div class="example-before">![Image](My%20Doc%202d6fa1e5/img.png)</div>
                             <div class="example-arrow">→</div>
                             <div class="example-after">![Image](img.png)</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-icon">💬</div>
+                    <div class="process-content">
+                        <h3>Converts callouts</h3>
+                        <p>Transforms Notion callouts with icons to Obsidian format</p>
+                        <div class="example">
+                            <div class="example-before">&lt;aside&gt;...&lt;/aside&gt;</div>
+                            <div class="example-arrow">→</div>
+                            <div class="example-after">&gt; [!note] 📘 Content</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="process-item">
+                    <div class="process-icon">📊</div>
+                    <div class="process-content">
+                        <h3>Processes databases</h3>
+                        <p>Converts CSV exports to individual notes or dynamic Dataview indexes</p>
+                        <div class="example">
+                            <pre>--dataview flag creates:
+_databases/Tasks.csv
+Tasks/task-1.md
+Tasks_Index.md</pre>
                         </div>
                     </div>
                 </div>
