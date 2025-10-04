@@ -9,6 +9,8 @@
   [![Version](https://img.shields.io/badge/version-2.3.0-8250E7?style=flat&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian/releases)
   [![License](https://img.shields.io/badge/license-MIT-8250E7?style=flat&labelColor=262626)](LICENSE)
 
+  **[📖 View Documentation & Examples →](https://bitbonsai.github.io/notion2obsidian/)**
+
 </div>
 
 ## ✨ Features
