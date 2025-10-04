@@ -5,6 +5,7 @@ import { stat, readdir, rename, copyFile, mkdir, rm, writeFile, lstat, realpath,
 import { join, dirname, basename, extname, relative, sep } from "node:path";
 import { unzipSync } from "fflate";
 import chalk from "chalk";
+import matter from "gray-matter";
 
 // ============================================================================
 // Runtime Check
@@ -24,11 +25,37 @@ if (typeof Bun === 'undefined') {
 const PATTERNS = {
   hexId: /^[0-9a-fA-F]{32}$/,
   mdLink: /\[([^\]]+)\]\(([^)]+\.md)\)/g,
-  frontmatter: /^\uFEFF?\s*---\s*\n/,  // Handle BOM and whitespace
-  notionIdExtract: /\s([0-9a-fA-F]{32})(?:\.[^.]+)?$/
+  frontmatter: /^\uFEFF?\s*---\s*\n/,  // Only accept --- delimiters (Obsidian requirement)
+  notionIdExtract: /\s([0-9a-fA-F]{32})(?:\.[^.]+)?$/,
+  // Visual patterns for Notion callouts and images
+  notionCallout: /<img src="https:\/\/www\.notion\.so\/icons\/([^"]+)" alt="[^"]*" width="[^"]*"\s*\/>\s*\n\s*\n\s*\*\*([^*]+)\*\*\s*\n\s*\n\s*([\s\S]*?)(?=<aside>|<\/aside>|\n\n[#*]|\n\n<|\Z)/g,
+  notionAsideCallout: /<aside>\s*<img src="https:\/\/www\.notion\.so\/icons\/([^"]+)" alt="[^"]*" width="[^"]*"\s*\/>\s*([\s\S]*?)<\/aside>/g,
+  coverImage: /^!\[([^\]]*)\]\(([^)]+)\)$/m  // First image in file
 };
 
 const BATCH_SIZE = 50;
+
+// Icon to Obsidian callout mapping
+const ICON_TO_CALLOUT = {
+  'wind_blue.svg': { type: 'note', emoji: '💨' },
+  'token_blue.svg': { type: 'note', emoji: '📘' },
+  'token_green.svg': { type: 'tip', emoji: '📗' },
+  'token_yellow.svg': { type: 'example', emoji: '📙' },
+  'token_red.svg': { type: 'warning', emoji: '📕' },
+  'warning-sign_yellow.svg': { type: 'warning', emoji: '⚠️' },
+  'warning-sign_red.svg': { type: 'danger', emoji: '🚨' },
+  'info_blue.svg': { type: 'info', emoji: 'ℹ️' },
+  'check_green.svg': { type: 'success', emoji: '✅' },
+  'cross_red.svg': { type: 'failure', emoji: '❌' },
+  'lightbulb_yellow.svg': { type: 'tip', emoji: '💡' },
+  'important_red.svg': { type: 'important', emoji: '❗' },
+  'question_blue.svg': { type: 'question', emoji: '❓' },
+  'gear_blue.svg': { type: 'abstract', emoji: '⚙️' },
+  'target_red.svg': { type: 'important', emoji: '🎯' },
+  'fire_red.svg': { type: 'danger', emoji: '🔥' },
+  'star_yellow.svg': { type: 'tip', emoji: '⭐' },
+  'bookmark_blue.svg': { type: 'quote', emoji: '🔖' }
+};
 
 // ============================================================================
 // CLI Arguments Parser
@@ -37,10 +64,15 @@ const BATCH_SIZE = 50;
 function parseArgs() {
   const args = process.argv.slice(2);
   const config = {
-    targetDir: '.',
+    targetPaths: [],
+    outputDir: null,
     dryRun: false,
     verbose: false,
-    dirExplicitlyProvided: false
+    pathsExplicitlyProvided: false,
+    convertCallouts: true,
+    processCsv: true,
+    preserveBanners: true,
+    dataviewMode: true
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -50,16 +82,37 @@ function parseArgs() {
       config.dryRun = true;
     } else if (arg === '--verbose' || arg === '-v') {
       config.verbose = true;
+    } else if (arg === '--output' || arg === '-o') {
+      if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+        config.outputDir = args[i + 1];
+        i++; // Skip the next argument since it's the output directory
+      } else {
+        console.error(chalk.red('Error: --output requires a directory path'));
+        process.exit(1);
+      }
     } else if (arg === '--version' || arg === '-V') {
       showVersion();
       process.exit(0);
     } else if (arg === '--help' || arg === '-h') {
       showHelp();
       process.exit(0);
+    } else if (arg === '--no-callouts') {
+      config.convertCallouts = false;
+    } else if (arg === '--no-csv') {
+      config.processCsv = false;
+    } else if (arg === '--traditional') {
+      config.dataviewMode = false;
+    } else if (arg === '--no-banners') {
+      config.preserveBanners = false;
     } else if (!arg.startsWith('-')) {
-      config.targetDir = arg;
-      config.dirExplicitlyProvided = true;
+      config.targetPaths.push(arg);
+      config.pathsExplicitlyProvided = true;
     }
+  }
+
+  // Default to current directory if no paths provided
+  if (config.targetPaths.length === 0) {
+    config.targetPaths.push('.');
   }
 
   return config;
@@ -87,23 +140,40 @@ function showHelp() {
 ${chalk.blueBright.bold('💎 Notion 2 Obsidian')} ${chalk.gray(`v${getVersion()}`)}
 
 ${chalk.yellow('Usage:')}
-  notion2obsidian [directory|zip-file] [options]
+  notion2obsidian [directory|zip-file(s)|glob-pattern] [options]
 
 ${chalk.yellow('Options:')}
+  -o, --output DIR    Output directory for processed files (default: extract location)
   -d, --dry-run       Preview changes without modifying files
                       (extracts 10% sample or 10MB max for zip files)
   -v, --verbose       Show detailed processing information
+      --no-callouts   Disable Notion callout conversion to Obsidian callouts
+      --no-csv        Disable CSV database processing and index generation
+      --traditional   Use traditional static table indexes instead of Dataview format
+      --no-banners    Disable cover image detection and banner frontmatter
   -V, --version       Show version number
   -h, --help          Show this help message
 
 ${chalk.yellow('Examples:')}
+  ${chalk.gray('# Single zip file')}
   notion2obsidian ./Export-abc123.zip
-  notion2obsidian ./Export-abc123.zip --dry-run
-  notion2obsidian ./my-notion-export
-  notion2obsidian ./my-export --dry-run
+
+  ${chalk.gray('# Multiple zip files with custom output')}
+  notion2obsidian *.zip -o ~/Obsidian/Notion-Import
+
+  ${chalk.gray('# Multiple zip files with glob pattern')}
+  notion2obsidian Export-*.zip --output ./processed
+
+  ${chalk.gray('# Directory processing with output')}
+  notion2obsidian ./my-notion-export -o ~/Documents/Obsidian
+
+  ${chalk.gray('# Dry run to preview changes')}
+  notion2obsidian *.zip --dry-run
 
 ${chalk.blueBright('Features:')}
-  • Accepts zip files directly (extracts to same directory)
+  • Accepts zip files directly (extracts and merges to unified directory)
+  • Supports multiple zip files with glob patterns (*.zip, Export-*.zip)
+  • Custom output directory with -o/--output option
   • Removes Notion IDs from filenames and directories
   • Adds YAML frontmatter with metadata
   • Converts markdown links to wiki links
@@ -131,6 +201,34 @@ function sanitizeFilename(name) {
   return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '-');
 }
 
+function shortenFilename(filename, maxLength = 50) {
+  if (filename.length <= maxLength) {
+    return filename;
+  }
+
+  const ext = extname(filename);
+  const nameWithoutExt = filename.slice(0, -ext.length);
+
+  // Reserve space for extension + "..." + last 5 chars
+  const reservedSpace = ext.length + 3 + 5; // "..." + last5chars + ext
+  const availableForStart = maxLength - reservedSpace;
+
+  if (availableForStart > 5 && nameWithoutExt.length > 10) {
+    const startPart = nameWithoutExt.slice(0, availableForStart);
+    const endPart = nameWithoutExt.slice(-5); // Last 5 characters
+    return startPart + '...' + endPart + ext;
+  }
+
+  // Fallback to original behavior if name is too short for this pattern
+  const availableLength = maxLength - ext.length - 3; // 3 for "..."
+  if (availableLength > 0) {
+    return nameWithoutExt.slice(0, availableLength) + '...' + ext;
+  }
+
+  // If even the extension is too long, just truncate everything
+  return filename.slice(0, maxLength - 3) + '...';
+}
+
 function cleanName(filename) {
   const ext = extname(filename);
   const nameWithoutExt = filename.slice(0, -ext.length);
@@ -152,6 +250,55 @@ function cleanDirName(dirname) {
     return sanitizeFilename(parts.join(' '));
   }
   return sanitizeFilename(dirname);
+}
+
+// ============================================================================
+// Glob Pattern Resolution
+// ============================================================================
+
+async function resolveGlobPatterns(patterns) {
+  const { Glob } = await import('bun');
+  const resolvedPaths = [];
+  const errors = [];
+
+  for (const pattern of patterns) {
+    try {
+      // Check if it's a literal path first (not a glob pattern)
+      if (!pattern.includes('*') && !pattern.includes('?') && !pattern.includes('[')) {
+        // Check if the literal path exists
+        try {
+          await stat(pattern);
+          resolvedPaths.push(pattern);
+        } catch (err) {
+          errors.push(`Path not found: ${pattern}`);
+        }
+        continue;
+      }
+
+      // It's a glob pattern, resolve it
+      const glob = new Glob(pattern);
+      const matches = [];
+
+      for await (const file of glob.scan({
+        cwd: process.cwd(),
+        absolute: true,
+        dot: false,
+        onlyFiles: true
+      })) {
+        matches.push(file);
+      }
+
+      if (matches.length === 0) {
+        errors.push(`No files found matching pattern: ${pattern}`);
+      } else {
+        resolvedPaths.push(...matches);
+      }
+    } catch (err) {
+      errors.push(`Error resolving pattern '${pattern}': ${err.message}`);
+    }
+  }
+
+  return { resolvedPaths, errors };
 }
 
 
@@ -282,46 +429,146 @@ function getTagsFromPath(filePath, baseDir) {
 // File stats function removed - dates not meaningful for Notion exports
 
 // ============================================================================
-// Frontmatter Generation
+// Frontmatter Handling (Gray-Matter Based)
 // ============================================================================
 
-function escapeYamlString(str) {
-  // Escape double quotes in YAML string values
-  return str.replace(/"/g, '\\"');
+/**
+ * Validates if content has proper Obsidian-compatible frontmatter
+ * @param {string} content - The file content to check
+ * @returns {boolean} - True if valid frontmatter is detected
+ */
+function hasValidFrontmatter(content) {
+  // Strip BOM if present
+  const cleanContent = content.replace(/^\uFEFF/, '');
+
+  // Check if content starts with exactly '---' (Obsidian requirement)
+  return cleanContent.trimStart().startsWith('---\n');
 }
 
-function generateFrontmatter(metadata, relativePath) {
-  const lines = ['---'];
+/**
+ * Parses frontmatter from content using gray-matter
+ * @param {string} content - The file content
+ * @returns {Object} - { data: {}, content: '', hasFrontmatter: boolean }
+ */
+function parseFrontmatter(content) {
+  try {
+    // Strip BOM if present
+    const cleanContent = content.replace(/^\uFEFF/, '');
 
-  if (metadata.title) lines.push(`title: "${escapeYamlString(metadata.title)}"`);
+    const parsed = matter(cleanContent);
+
+    return {
+      data: parsed.data || {},
+      content: parsed.content || '',
+      hasFrontmatter: Object.keys(parsed.data || {}).length > 0
+    };
+  } catch (error) {
+    console.warn(chalk.yellow(`Warning: Failed to parse frontmatter: ${error.message}`));
+    return {
+      data: {},
+      content: content.replace(/^\uFEFF/, ''),
+      hasFrontmatter: false
+    };
+  }
+}
+
+/**
+ * Generates valid YAML frontmatter using gray-matter
+ * @param {Object} metadata - The metadata object
+ * @param {string} relativePath - Relative path for folder field
+ * @returns {string} - Valid YAML frontmatter string
+ */
+function generateValidFrontmatter(metadata, relativePath) {
+  // Build frontmatter data object
+  const frontmatterData = {};
+
+  // Add metadata in a consistent order
+  if (metadata.title) frontmatterData.title = metadata.title;
+
   if (metadata.tags && metadata.tags.length > 0) {
-    lines.push(`tags: [${metadata.tags.join(', ')}]`);
+    frontmatterData.tags = metadata.tags;
   }
+
   if (metadata.aliases && metadata.aliases.length > 0) {
-    lines.push(`notion-alias:`);
-    metadata.aliases.forEach(alias => {
-      lines.push(`  - "${escapeYamlString(alias)}"`);
-    });
+    frontmatterData.aliases = metadata.aliases;
   }
-  if (metadata.notionId) lines.push(`notion-id: "${metadata.notionId}"`);
+
+  if (metadata.notionId) frontmatterData['notion-id'] = metadata.notionId;
 
   // Add folder path for disambiguation
   if (relativePath && relativePath !== '.') {
-    lines.push(`folder: "${escapeYamlString(relativePath)}"`);
+    frontmatterData.folder = relativePath;
   }
 
-  // Add inline metadata if found
-  if (metadata.status) lines.push(`status: "${escapeYamlString(metadata.status)}"`);
-  if (metadata.owner) lines.push(`owner: "${escapeYamlString(metadata.owner)}"`);
-  if (metadata.dates) lines.push(`dates: "${escapeYamlString(metadata.dates)}"`);
-  if (metadata.priority) lines.push(`priority: "${escapeYamlString(metadata.priority)}"`);
-  if (metadata.completion !== undefined) lines.push(`completion: ${metadata.completion}`);
-  if (metadata.summary) lines.push(`summary: "${escapeYamlString(metadata.summary)}"`);
+  // Add banner image if provided
+  if (metadata.banner) frontmatterData.banner = metadata.banner;
 
-  lines.push(`published: false`);
+  // Add inline metadata if found
+  if (metadata.status) frontmatterData.status = metadata.status;
+  if (metadata.owner) frontmatterData.owner = metadata.owner;
+  if (metadata.dates) frontmatterData.dates = metadata.dates;
+  if (metadata.priority) frontmatterData.priority = metadata.priority;
+  if (metadata.completion !== undefined) frontmatterData.completion = metadata.completion;
+  if (metadata.summary) frontmatterData.summary = metadata.summary;
+
+  // Always set published to false
+  frontmatterData.published = false;
+
+  try {
+    // Use gray-matter to generate properly formatted YAML
+    const result = matter.stringify('', frontmatterData);
+
+    // Extract just the frontmatter part (remove empty content)
+    const frontmatterMatch = result.match(/^---\n([\s\S]*?)\n---\n$/);
+    if (frontmatterMatch) {
+      return `---\n${frontmatterMatch[1]}\n---`;
+    }
+
+    // Fallback: generate manually if matter.stringify doesn't work as expected
+    return generateFallbackFrontmatter(frontmatterData);
+
+  } catch (error) {
+    console.warn(chalk.yellow(`Warning: Failed to generate frontmatter with gray-matter: ${error.message}`));
+    return generateFallbackFrontmatter(frontmatterData);
+  }
+}
+
+/**
+ * Fallback frontmatter generation for edge cases
+ * @param {Object} data - The frontmatter data object
+ * @returns {string} - Manually formatted YAML frontmatter
+ */
+function generateFallbackFrontmatter(data) {
+  const lines = ['---'];
+
+  for (const [key, value] of Object.entries(data)) {
+    if (Array.isArray(value)) {
+      lines.push(`${key}:`);
+      value.forEach(item => {
+        lines.push(`  - ${JSON.stringify(item)}`);
+      });
+    } else {
+      lines.push(`${key}: ${JSON.stringify(value)}`);
+    }
+  }
 
   lines.push('---');
   return lines.join('\n');
+}
+
+/**
+ * Validates that generated frontmatter is proper YAML
+ * @param {string} frontmatterString - The frontmatter to validate
+ * @returns {boolean} - True if valid
+ */
+function validateFrontmatter(frontmatterString) {
+  try {
+    // Parse the frontmatter to ensure it's valid YAML
+    const parsed = matter(`${frontmatterString}\n\ntest content`);
+    return parsed.data && typeof parsed.data === 'object';
+  } catch (error) {
+    return false;
+  }
 }
 
 // ============================================================================
@@ -386,8 +633,8 @@ async function processFileContent(filePath, metadata, fileMap, baseDir, dirNameM
   const inlineMetadata = extractInlineMetadataFromLines(lines.slice(0, 30));
   Object.assign(metadata, inlineMetadata);
 
-  // Check if file already has frontmatter
-  const hasFrontmatter = PATTERNS.frontmatter.test(content);
+  // Check if file already has valid Obsidian frontmatter
+  const hasFrontmatter = hasValidFrontmatter(content);
 
   // Add folder path to metadata
   const relativePath = relative(baseDir, dirname(filePath));
@@ -395,10 +642,28 @@ async function processFileContent(filePath, metadata, fileMap, baseDir, dirNameM
 
   let newContent = content;
 
+  // Convert Notion callouts to Obsidian callouts
+  const { content: contentAfterCallouts, calloutsConverted } = convertNotionCallouts(newContent);
+  newContent = contentAfterCallouts;
+
+  // Detect and handle cover images
+  const { bannerPath, content: contentAfterBanner } = detectCoverImage(newContent);
+  if (bannerPath) {
+    metadata.banner = bannerPath;
+  }
+  newContent = contentAfterBanner;
+
   // Add frontmatter if it doesn't exist
   if (!hasFrontmatter) {
-    const frontmatter = generateFrontmatter(metadata, relativePath);
-    newContent = frontmatter + '\n\n' + content;
+    const frontmatter = generateValidFrontmatter(metadata, relativePath);
+
+    // Validate the generated frontmatter
+    if (!validateFrontmatter(frontmatter)) {
+      console.warn(chalk.yellow(`Warning: Generated invalid frontmatter for ${filePath}`));
+    }
+
+    // Ensure content starts with frontmatter and has proper line endings
+    newContent = frontmatter + '\n\n' + newContent.replace(/^\uFEFF/, ''); // Remove BOM if present
   }
 
   // Convert markdown links to wiki links and count them
@@ -414,24 +679,387 @@ async function processFileContent(filePath, metadata, fileMap, baseDir, dirNameM
   // Update asset paths to use cleaned directory names
   newContent = cleanAssetPaths(newContent, dirNameMap);
 
-  return { newContent, linkCount, hadFrontmatter: hasFrontmatter };
+  return { newContent, linkCount, hadFrontmatter: hasFrontmatter, calloutsConverted: calloutsConverted || 0 };
 }
 
 async function updateFileContent(filePath, metadata, fileMap, baseDir, dirNameMap = new Map()) {
   try {
-    const { newContent, linkCount, skipped } = await processFileContent(filePath, metadata, fileMap, baseDir, dirNameMap);
+    const { newContent, linkCount, skipped, calloutsConverted } = await processFileContent(filePath, metadata, fileMap, baseDir, dirNameMap);
 
     // Skip completely empty files
     if (skipped) {
       return { success: true, linkCount: 0, skipped: true };
     }
 
+    // Write file with explicit UTF-8 encoding, no BOM
     await Bun.write(filePath, newContent);
 
-    return { success: true, linkCount };
+    return { success: true, linkCount, calloutsConverted };
   } catch (err) {
-    return { success: false, error: err.message, linkCount: 0 };
+    return { success: false, error: err.message, linkCount: 0, calloutsConverted: 0 };
   }
+}
+
+// ============================================================================
+// Notion Visual Element Conversion
+// ============================================================================
+
+/**
+ * Converts Notion callouts to Obsidian callout syntax
+ * @param {string} content - The markdown content to process
+ * @returns {Object} - { content: string, calloutsConverted: number }
+ */
+function convertNotionCallouts(content) {
+  let calloutsConverted = 0;
+  let processedContent = content;
+
+  // Handle <aside> callouts (like wind_blue.svg example)
+  processedContent = processedContent.replace(PATTERNS.notionAsideCallout, (match, iconFile, calloutContent) => {
+    const calloutInfo = ICON_TO_CALLOUT[iconFile] || { type: 'note', emoji: '📄' };
+
+    // Clean up the content - remove extra whitespace and newlines
+    const cleanContent = calloutContent
+      .replace(/^\s*\n+/, '') // Remove leading newlines
+      .replace(/\n+\s*$/, '') // Remove trailing newlines
+      .replace(/\n\n+/g, '\n\n') // Normalize multiple newlines
+      .split('\n')
+      .map(line => line.trim() ? `> ${line}` : '>')
+      .join('\n');
+
+    // Extract title if it starts with **text**
+    const titleMatch = calloutContent.match(/^\s*\*\*([^*]+)\*\*/);
+    const title = titleMatch ? titleMatch[1] : '';
+    const contentWithoutTitle = titleMatch ?
+      calloutContent.replace(/^\s*\*\*[^*]+\*\*\s*\n?/, '') : calloutContent;
+
+    const finalTitle = title ? ` ${calloutInfo.emoji} ${title}` : '';
+
+    calloutsConverted++;
+    return `> [!${calloutInfo.type}]${finalTitle}\n> ${contentWithoutTitle.trim().split('\n').join('\n> ')}`;
+  });
+
+  // Handle standalone callouts (img + ** pattern, less common)
+  processedContent = processedContent.replace(PATTERNS.notionCallout, (match, iconFile, title, content) => {
+    const calloutInfo = ICON_TO_CALLOUT[iconFile] || { type: 'note', emoji: '📄' };
+
+    // Clean up the content
+    const cleanContent = content
+      .replace(/^\s*\n+/, '')
+      .replace(/\n+\s*$/, '')
+      .trim();
+
+    const finalTitle = title ? ` ${calloutInfo.emoji} ${title}` : '';
+
+    calloutsConverted++;
+    return `> [!${calloutInfo.type}]${finalTitle}\n> ${cleanContent.split('\n').join('\n> ')}`;
+  });
+
+  return { content: processedContent, calloutsConverted };
+}
+
+/**
+ * Detects cover images and generates banner frontmatter
+ * @param {string} content - The markdown content
+ * @returns {Object} - { bannerPath: string|null, content: string }
+ */
+function detectCoverImage(content) {
+  const coverMatch = content.match(PATTERNS.coverImage);
+
+  if (coverMatch) {
+    const [fullMatch, altText, imagePath] = coverMatch;
+
+    // Check if this looks like a cover/banner image
+    const isCoverCandidate =
+      content.indexOf(fullMatch) < 200 || // First 200 chars
+      imagePath.includes('cover') ||
+      imagePath.includes('banner') ||
+      imagePath.includes('hero');
+
+    if (isCoverCandidate) {
+      // Convert to wiki-link format and clean path
+      const cleanPath = imagePath.split('/').pop(); // Get just filename
+      const bannerPath = `[[${cleanPath}]]`;
+
+      // Remove the cover image from content to avoid duplication
+      const contentWithoutCover = content.replace(fullMatch, '').replace(/^\n+/, '');
+
+      return { bannerPath, content: contentWithoutCover };
+    }
+  }
+
+  return { bannerPath: null, content };
+}
+
+/**
+ * Processes CSV database files and creates index pages
+ * @param {string} targetDir - The directory to scan for CSV files
+ * @returns {Array} - Array of processed CSV info
+ */
+async function processCsvDatabases(targetDir) {
+  const csvFiles = [];
+  const csvGlob = new Glob('**/*.csv');
+
+  for (const csvPath of csvGlob.scanSync(targetDir)) {
+    const fullPath = join(targetDir, csvPath);
+
+    try {
+      const csvContent = await Bun.file(fullPath).text();
+      const lines = csvContent.split('\n').filter(line => line.trim());
+
+      if (lines.length < 2) continue; // Skip empty or header-only files
+
+      // Parse CSV header
+      const header = lines[0].replace(/^\uFEFF/, '').split(',').map(col => col.trim().replace(/"/g, ''));
+      const rows = lines.slice(1).map(line => {
+        // Simple CSV parsing (handles basic cases)
+        const values = [];
+        let current = '';
+        let inQuotes = false;
+
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+          } else {
+            current += char;
+          }
+        }
+        values.push(current.trim());
+        return values;
+      });
+
+      // Extract database name from filename
+      const fileName = basename(csvPath, '.csv');
+      const databaseName = fileName.replace(/\s[0-9a-fA-F]{32}(_all)?$/, ''); // Remove hash
+
+      csvFiles.push({
+        path: fullPath,
+        fileName,
+        databaseName,
+        header,
+        rows,
+        recordCount: rows.length
+      });
+
+    } catch (error) {
+      console.warn(chalk.yellow(`Warning: Failed to process CSV ${csvPath}: ${error.message}`));
+    }
+  }
+
+  return csvFiles;
+}
+
+/**
+ * Creates a markdown index page for a CSV database
+ * @param {Object} csvInfo - CSV file information
+ * @param {string} targetDir - Target directory
+ * @returns {string} - Generated markdown content
+ */
+function generateDatabaseIndex(csvInfo, targetDir) {
+  const { databaseName, header, rows } = csvInfo;
+
+  let markdown = `# ${databaseName}\n\n`;
+  markdown += `Database with ${rows.length} records.\n\n`;
+
+  // Create markdown table
+  markdown += `| ${header.join(' | ')} |\n`;
+  markdown += `| ${header.map(() => '---').join(' | ')} |\n`;
+
+  rows.slice(0, 10).forEach(row => { // Limit to first 10 rows for preview
+    const cells = row.map(cell => cell.replace(/"/g, '').replace(/\|/g, '\\|'));
+    markdown += `| ${cells.join(' | ')} |\n`;
+  });
+
+  if (rows.length > 10) {
+    markdown += `\n*Showing first 10 of ${rows.length} records.*\n`;
+  }
+
+  // Look for corresponding markdown files (database pages)
+  const correspondingFiles = [];
+  const baseDir = dirname(csvInfo.path);
+
+  try {
+    const dirFiles = require('fs').readdirSync(baseDir);
+    dirFiles.forEach(file => {
+      if (file.endsWith('.md') && file.includes(csvInfo.fileName.split(' ')[0])) {
+        correspondingFiles.push(file);
+      }
+    });
+  } catch (error) {
+    // Directory might not exist
+  }
+
+  if (correspondingFiles.length > 0) {
+    markdown += `\n## Related Pages\n\n`;
+    correspondingFiles.forEach(file => {
+      const pageName = file.replace(/\.md$/, '').replace(/\s[0-9a-fA-F]{32}$/, '');
+      markdown += `- [[${pageName}]]\n`;
+    });
+  }
+
+  return markdown;
+}
+
+/**
+ * Creates individual markdown notes from CSV rows (Dataview mode)
+ * @param {Object} csvInfo - CSV file information
+ * @param {string} targetDir - Target directory
+ * @param {string} databasesDir - _databases subdirectory path
+ * @returns {Array} - Array of created note file paths
+ */
+async function createNotesFromCsvRows(csvInfo, targetDir, databasesDir) {
+  const { databaseName, header, rows, fileName } = csvInfo;
+  const createdNotes = [];
+
+  // Create a folder for the database notes
+  const notesDir = join(targetDir, databaseName);
+  await mkdir(notesDir, { recursive: true });
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+
+    // Create note content with frontmatter
+    const noteData = {};
+    const frontmatter = {
+      tags: [`database/${databaseName.toLowerCase().replace(/\s+/g, '-')}`],
+      'database-source': `_databases/${fileName}`,
+      'database-row': i + 1,
+      published: false
+    };
+
+    // Extract title from first column or generate one
+    let title = '';
+    if (row[0] && row[0].trim()) {
+      title = row[0].replace(/"/g, '').trim();
+    } else {
+      title = `${databaseName} Record ${i + 1}`;
+    }
+
+    frontmatter.title = title;
+
+    // Add CSV columns as frontmatter properties
+    header.forEach((column, idx) => {
+      if (row[idx] && row[idx].trim()) {
+        const value = row[idx].replace(/"/g, '').trim();
+        const key = column.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+        // Special handling for common Notion database columns
+        if (key === 'notion-id' || column === 'notion-id') {
+          frontmatter['notion-id'] = value;
+        } else if (key === 'status' || key === 'priority' || key === 'assignee' || key === 'owner') {
+          frontmatter[key] = value;
+        } else {
+          frontmatter[key] = value;
+        }
+      }
+    });
+
+    // Generate clean filename
+    const cleanTitle = title
+      .replace(/[^a-zA-Z0-9\s-]/g, '') // Remove special chars
+      .replace(/\s+/g, '-')            // Spaces to hyphens
+      .toLowerCase()
+      .slice(0, 50);                   // Limit length
+
+    const noteFileName = `${cleanTitle || `record-${i + 1}`}.md`;
+    const notePath = join(notesDir, noteFileName);
+
+    // Generate markdown content
+    let content = generateValidFrontmatter(frontmatter, '');
+    content += `\n# ${title}\n\n`;
+
+    // Add table with all properties
+    content += '## Properties\n\n';
+    content += '| Property | Value |\n';
+    content += '| --- | --- |\n';
+
+    header.forEach((column, idx) => {
+      if (row[idx] && row[idx].trim()) {
+        const value = row[idx].replace(/"/g, '').trim().replace(/\|/g, '\\|');
+        content += `| ${column} | ${value} |\n`;
+      }
+    });
+
+    content += `\n## Database Info\n\n`;
+    content += `Source: [[${databaseName}_Index|${databaseName} Database]]\n`;
+    content += `Record: ${i + 1} of ${rows.length}\n`;
+
+    await Bun.write(notePath, content);
+    createdNotes.push(notePath);
+  }
+
+  return createdNotes;
+}
+
+/**
+ * Generates a Dataview-compatible database index page
+ * @param {Object} csvInfo - CSV file information
+ * @param {string} targetDir - Target directory
+ * @param {Array} createdNotes - Array of created note paths
+ * @returns {string} - Generated markdown content
+ */
+function generateDataviewIndex(csvInfo, targetDir, createdNotes) {
+  const { databaseName, header, rows, fileName } = csvInfo;
+
+  let markdown = `# ${databaseName}\n\n`;
+  markdown += `Database with ${rows.length} records converted to individual notes.\n\n`;
+
+  // Add Dataview queries
+  markdown += '## All Records\n\n';
+  markdown += '```dataview\n';
+  markdown += 'TABLE WITHOUT ID file.link as "Record", ';
+
+  // Add common columns to the query
+  const commonColumns = ['status', 'priority', 'assignee', 'owner', 'due'];
+  const availableColumns = commonColumns.filter(col =>
+    header.some(h => h.toLowerCase().includes(col))
+  );
+
+  if (availableColumns.length > 0) {
+    markdown += availableColumns.join(', ') + '\n';
+  } else {
+    markdown += 'title\n';
+  }
+
+  markdown += `FROM #database/${databaseName.toLowerCase().replace(/\s+/g, '-')}\n`;
+  markdown += '```\n\n';
+
+  // Add filtered views
+  if (availableColumns.includes('status')) {
+    markdown += '## Active Records\n\n';
+    markdown += '```dataview\n';
+    markdown += 'TABLE WITHOUT ID file.link as "Record", status, priority\n';
+    markdown += `FROM #database/${databaseName.toLowerCase().replace(/\s+/g, '-')}\n`;
+    markdown += 'WHERE status != "Done" AND status != "Completed"\n';
+    markdown += 'SORT priority DESC\n';
+    markdown += '```\n\n';
+  }
+
+  // Add CSV source info
+  markdown += '## CSV Data Source\n\n';
+  markdown += `Raw CSV file: \`_databases/${fileName}\`\n\n`;
+  markdown += 'You can query the CSV directly with Dataview:\n\n';
+  markdown += '```dataview\n';
+  markdown += `TABLE WITHOUT ID ${header.slice(0, 3).join(', ')}\n`;
+  markdown += `FROM csv("_databases/${fileName}")\n`;
+  markdown += '```\n\n';
+
+  // Add individual note links
+  markdown += `## Individual Notes (${createdNotes.length})\n\n`;
+  createdNotes.slice(0, 10).forEach(notePath => {
+    const noteName = basename(notePath, '.md');
+    const displayName = noteName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    markdown += `- [[${noteName}|${displayName}]]\n`;
+  });
+
+  if (createdNotes.length > 10) {
+    markdown += `\n*Showing first 10 of ${createdNotes.length} notes. Use Dataview queries above to see all.*\n`;
+  }
+
+  return markdown;
 }
 
 // ============================================================================
@@ -516,6 +1144,9 @@ class MigrationStats {
     this.totalLinks = 0;
     this.namingConflicts = [];
     this.duplicates = 0;
+    this.csvFilesProcessed = 0;
+    this.csvIndexesCreated = 0;
+    this.calloutsConverted = 0;
   }
 
   addNamingConflict(filePath, resolution) {
@@ -530,7 +1161,10 @@ class MigrationStats {
       renamedDirs: this.renamedDirs,
       totalLinks: this.totalLinks,
       namingConflictCount: this.namingConflicts.length,
-      duplicates: this.duplicates
+      duplicates: this.duplicates,
+      csvFilesProcessed: this.csvFilesProcessed,
+      csvIndexesCreated: this.csvIndexesCreated,
+      calloutsConverted: this.calloutsConverted
     };
   }
 }
@@ -540,30 +1174,38 @@ class MigrationStats {
 // ============================================================================
 
 async function extractZipToSameDirectory(zipPath, options = {}) {
-  const { sample = false, samplePercentage = 0.10, maxSampleBytes = 10_000_000 } = options;
+  const { sample = false, samplePercentage = 0.10, maxSampleBytes = 10_000_000, mergeToDir = null, suppressMessages = false } = options;
 
   const zipDir = dirname(zipPath);
   const zipBaseName = basename(zipPath, '.zip');
 
-  // Shorten the directory name by truncating long hashes/UUIDs
-  // Pattern: Export-2d6fa1e5-8571-4845-8e81-f7d5ca30194a-Part-1 → Export-2d6f
-  let shortName = zipBaseName;
-  // Match UUID format (with hyphens) or plain hex (without hyphens)
-  const uuidPattern = /^(Export-[0-9a-fA-F]{4})[0-9a-fA-F-]{24,}/;
-  const match = zipBaseName.match(uuidPattern);
-  if (match) {
-    shortName = match[1];  // e.g., "Export-2d6f"
+  let extractDir;
+  if (mergeToDir) {
+    // Use the provided merge directory
+    extractDir = mergeToDir;
+  } else {
+    // Shorten the directory name by truncating long hashes/UUIDs
+    // Pattern: Export-2d6fa1e5-8571-4845-8e81-f7d5ca30194a-Part-1 → Export-2d6f
+    let shortName = zipBaseName;
+    // Match UUID format (with hyphens) or plain hex (without hyphens)
+    const uuidPattern = /^(Export-[0-9a-fA-F]{4})[0-9a-fA-F-]{24,}/;
+    const match = zipBaseName.match(uuidPattern);
+    if (match) {
+      shortName = match[1];  // e.g., "Export-2d6f"
+    }
+
+    extractDir = join(zipDir, `${shortName}-extracted`);
   }
 
-  const extractDir = join(zipDir, `${shortName}-extracted`);
+  if (!suppressMessages) {
+    console.log(chalk.cyan('📦 Extracting zip file...'));
+    console.log(chalk.gray(`Extracting to: ${extractDir}`));
 
-  console.log(chalk.cyan('📦 Extracting zip file...'));
-  console.log(chalk.gray(`Extracting to: ${extractDir}`));
-
-  if (sample) {
-    console.log(chalk.yellow(`Sample mode: extracting up to ${samplePercentage * 100}% or ${Math.round(maxSampleBytes / 1_000_000)}MB for preview`));
+    if (sample) {
+      console.log(chalk.yellow(`Sample mode: extracting up to ${samplePercentage * 100}% or ${Math.round(maxSampleBytes / 1_000_000)}MB for preview`));
+    }
+    console.log();
   }
-  console.log();
 
   try {
     // Read zip file
@@ -611,8 +1253,10 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
     // Create extraction directory
     await mkdir(extractDir, { recursive: true });
 
-    // Write files
+    // Write files and track nested zip files
     let fileCount = 0;
+    const nestedZips = [];
+
     for (const [filePath, content] of selectedFiles) {
       const fullPath = join(extractDir, filePath);
 
@@ -622,25 +1266,103 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
       // Write file
       await writeFile(fullPath, content);
 
+      // Check if this is a nested zip file
+      if (filePath.toLowerCase().endsWith('.zip')) {
+        nestedZips.push(fullPath);
+      }
+
       fileCount++;
     }
 
-    if (isSampled) {
-      console.log(chalk.green(`✓ Extracted ${fileCount} of ${totalFiles} files (${Math.round(fileCount / totalFiles * 100)}% sample)\n`));
-    } else {
-      console.log(chalk.green(`✓ Extraction complete (${fileCount} files)\n`));
+    // If we found nested zip files, extract them too
+    if (nestedZips.length > 0) {
+      if (!suppressMessages) {
+        console.log(chalk.yellow(`  Found ${nestedZips.length} nested zip file(s), extracting...`));
+      }
+
+      for (const nestedZipPath of nestedZips) {
+        try {
+          const nestedResult = await extractZipToSameDirectory(nestedZipPath, {
+            sample,
+            samplePercentage,
+            maxSampleBytes,
+            mergeToDir: extractDir,
+            suppressMessages: true
+          });
+
+          // Update counts with nested content
+          fileCount += nestedResult.sampleCount;
+          totalFiles += nestedResult.totalCount;
+          if (nestedResult.isSampled) isSampled = true;
+
+          // Remove the nested zip file after extraction
+          await rm(nestedZipPath);
+        } catch (err) {
+          if (!suppressMessages) {
+            console.log(chalk.yellow(`    Warning: Could not extract nested zip ${basename(nestedZipPath)}: ${err.message}`));
+          }
+        }
+      }
     }
 
-    // Check if zip extracted to a single top-level directory
+    if (!suppressMessages) {
+      if (isSampled) {
+        console.log(chalk.green(`✓ Extracted ${fileCount} of ${totalFiles} files (${Math.round(fileCount / totalFiles * 100)}% sample)\n`));
+      } else {
+        console.log(chalk.green(`✓ Extraction complete (${fileCount} files)\n`));
+      }
+    }
+
+    // Check if zip extracted to subdirectories that might contain the actual content
     const entries = await readdir(extractDir);
+
+    // If there's exactly one subdirectory, use it
     if (entries.length === 1) {
       const potentialSubdir = join(extractDir, entries[0]);
       const subdirStat = await stat(potentialSubdir).catch(() => null);
       if (subdirStat?.isDirectory()) {
-        console.log(chalk.gray(`Found subdirectory inside zip: ${entries[0]}`));
-        console.log(chalk.gray(`Working directory: ${extractDir}\n`));
+        if (!suppressMessages) {
+          console.log(chalk.gray(`Found subdirectory inside zip: ${entries[0]}`));
+          console.log(chalk.gray(`Working directory: ${extractDir}\n`));
+        }
         return {
           path: potentialSubdir,
+          extractDir, // Return parent for cleanup
+          isSampled,
+          sampleCount: fileCount,
+          totalCount: totalFiles
+        };
+      }
+    }
+
+    // If there are multiple entries, check if any contain markdown files
+    if (!suppressMessages && entries.length > 1) {
+      let bestSubdir = null;
+      let maxMdFiles = 0;
+
+      for (const entry of entries) {
+        const entryPath = join(extractDir, entry);
+        const entryStat = await stat(entryPath).catch(() => null);
+        if (entryStat?.isDirectory()) {
+          // Count markdown files in this subdirectory
+          const mdGlob = new Glob("**/*.md");
+          const mdFiles = [];
+          for await (const file of mdGlob.scan({ cwd: entryPath, absolute: false })) {
+            mdFiles.push(file);
+          }
+
+          if (mdFiles.length > maxMdFiles) {
+            maxMdFiles = mdFiles.length;
+            bestSubdir = entryPath;
+          }
+        }
+      }
+
+      if (bestSubdir && maxMdFiles > 0) {
+        console.log(chalk.gray(`Found ${maxMdFiles} markdown files in subdirectory: ${basename(bestSubdir)}`));
+        console.log(chalk.gray(`Working directory: ${extractDir}\n`));
+        return {
+          path: bestSubdir,
           extractDir, // Return parent for cleanup
           isSampled,
           sampleCount: fileCount,
@@ -657,13 +1379,191 @@ async function extractZipToSameDirectory(zipPath, options = {}) {
   }
 }
 
-async function showExtractedDirectoryInfo(extractedDir) {
-  const fullPath = require('node:path').resolve(extractedDir);
+async function extractMultipleZips(zipPaths, options = {}) {
+  const { sample = false, outputDir = null } = options;
 
-  console.log(chalk.cyan.bold('\n📁 Extracted Directory:'));
-  console.log(`   ${chalk.blue(fullPath)}`);
-  console.log(chalk.gray('\n   You can now open this directory in Obsidian.'));
-  console.log(chalk.gray(`   To remove the extracted files, run: ${chalk.white(`rm -rf "${extractedDir}"`)}\n`));
+  // Always use a temporary processing directory when outputDir is specified
+  let processingDir;
+  let isUsingCustomOutput = false;
+
+  if (outputDir) {
+    // Use system temp directory for processing to avoid nesting in user's output
+    const os = require('os');
+    const timestamp = Date.now().toString(36);
+    processingDir = join(os.tmpdir(), `notion2obsidian-${timestamp}`);
+    isUsingCustomOutput = true;
+  } else {
+    // No custom output - use original behavior (extract next to zip files)
+    const firstZipDir = dirname(zipPaths[0]);
+    const timestamp = Date.now().toString(36);
+    processingDir = join(firstZipDir, `notion-export-merged-${timestamp}`);
+  }
+
+  const mergeDir = processingDir;
+
+  console.log(chalk.cyan.bold(`📦 Extracting ${zipPaths.length} zip files to unified directory...`));
+  console.log(chalk.gray(`Merge directory: ${mergeDir}`));
+  console.log(chalk.gray(`Note: Will automatically extract any nested zip files found\n`));
+
+  // Create the merge directory
+  await mkdir(mergeDir, { recursive: true });
+
+  let totalExtractedFiles = 0;
+  let totalOriginalFiles = 0;
+  let anySampled = false;
+  const duplicateFiles = new Set();
+
+  try {
+    for (let i = 0; i < zipPaths.length; i++) {
+      const zipPath = zipPaths[i];
+      const zipName = basename(zipPath);
+      const shortName = shortenFilename(zipName, 50); // More generous for zip files
+
+      console.log(chalk.blue(`[${i + 1}/${zipPaths.length}] ${shortName}`));
+
+      const result = await extractZipToSameDirectory(zipPath, {
+        ...options,
+        mergeToDir: mergeDir,
+        suppressMessages: true  // Suppress individual zip messages
+      });
+
+      totalExtractedFiles += result.sampleCount;
+      totalOriginalFiles += result.totalCount;
+      if (result.isSampled) anySampled = true;
+    }
+
+    console.log(chalk.green.bold(`✓ Extracted ${zipPaths.length} zip files successfully!`));
+    if (anySampled) {
+      console.log(chalk.yellow(`  Sample mode: ${totalExtractedFiles} of ${totalOriginalFiles} total files (${Math.round(totalExtractedFiles / totalOriginalFiles * 100)}% preview)`));
+    } else {
+      console.log(chalk.green(`  Total files: ${totalExtractedFiles}`));
+    }
+    console.log();
+    console.log();
+
+    // Check if merge directory has subdirectories that might contain the actual content
+    const entries = await readdir(mergeDir);
+    let contentPath = mergeDir;
+
+    // If there's exactly one subdirectory, use it
+    if (entries.length === 1) {
+      const potentialSubdir = join(mergeDir, entries[0]);
+      const subdirStat = await stat(potentialSubdir).catch(() => null);
+      if (subdirStat?.isDirectory()) {
+        console.log(chalk.gray(`Found content in subdirectory: ${entries[0]}`));
+        contentPath = potentialSubdir;
+      }
+    } else {
+      // If there are multiple entries, check if any contain markdown files
+      let bestSubdir = null;
+      let maxMdFiles = 0;
+
+      for (const entry of entries) {
+        const entryPath = join(mergeDir, entry);
+        const entryStat = await stat(entryPath).catch(() => null);
+        if (entryStat?.isDirectory()) {
+          // Count markdown files in this subdirectory
+          const mdGlob = new Glob("**/*.md");
+          const mdFiles = [];
+          for await (const file of mdGlob.scan({ cwd: entryPath, absolute: false })) {
+            mdFiles.push(file);
+          }
+
+          if (mdFiles.length > maxMdFiles) {
+            maxMdFiles = mdFiles.length;
+            bestSubdir = entryPath;
+          }
+        }
+      }
+
+      if (bestSubdir && maxMdFiles > 0) {
+        console.log(chalk.gray(`Found ${maxMdFiles} markdown files in subdirectory: ${basename(bestSubdir)}`));
+        contentPath = bestSubdir;
+      }
+    }
+
+    // If using custom output directory, move content there
+    if (isUsingCustomOutput && outputDir) {
+      console.log(chalk.cyan('📋 Moving content to output directory...'));
+
+      // Ensure output directory exists
+      await mkdir(outputDir, { recursive: true });
+
+      // Move all content from processing directory to output directory
+      const contentEntries = await readdir(contentPath);
+      for (const entry of contentEntries) {
+        const sourcePath = join(contentPath, entry);
+        const targetPath = join(outputDir, entry);
+
+        // If target exists, we need to handle it gracefully
+        try {
+          await stat(targetPath);
+          // Target exists, remove it first
+          await rm(targetPath, { recursive: true, force: true });
+        } catch {
+          // Target doesn't exist, which is fine
+        }
+
+        await rename(sourcePath, targetPath);
+      }
+
+      console.log(chalk.green('✓ Content moved to output directory'));
+
+      return {
+        path: outputDir,
+        extractDir: mergeDir,
+        isSampled: anySampled,
+        sampleCount: totalExtractedFiles,
+        totalCount: totalOriginalFiles
+      };
+    }
+
+    // No custom output - return the content path as-is
+    return {
+      path: contentPath,
+      extractDir: mergeDir,
+      isSampled: anySampled,
+      sampleCount: totalExtractedFiles,
+      totalCount: totalOriginalFiles
+    };
+
+  } catch (err) {
+    // Clean up on error
+    await rm(mergeDir, { recursive: true, force: true });
+    throw err;
+  }
+}
+
+
+async function openDirectory(dirPath) {
+  const fullPath = require('node:path').resolve(dirPath);
+
+  console.log(chalk.cyan.bold('\n🎉 Migration Complete!'));
+  console.log(`Directory: ${chalk.blue(fullPath)}`);
+  console.log(chalk.gray('\nYour Notion export is now ready for Obsidian!'));
+
+  try {
+    // Detect platform and use appropriate open command
+    const platform = process.platform;
+    let openCommand;
+
+    if (platform === 'darwin') {
+      openCommand = 'open';
+    } else if (platform === 'win32') {
+      openCommand = 'start';
+    } else {
+      openCommand = 'xdg-open';
+    }
+
+    const { spawn } = require('child_process');
+    spawn(openCommand, [fullPath], { detached: true, stdio: 'ignore' });
+
+    console.log(chalk.green('✓ Opening directory...'));
+  } catch (err) {
+    console.log(chalk.yellow(`Could not open directory automatically.`));
+  }
+
+  console.log();
 }
 
 // ============================================================================
@@ -682,10 +1582,13 @@ async function promptForConfirmation(dryRun) {
   const { value } = await reader.read();
   reader.releaseLock();
 
-  // Check if ESC key was pressed (ASCII 27 or \x1b)
-  if (value && value.length > 0 && value[0] === 27) {
-    console.log(chalk.red('\n✖ Migration cancelled'));
-    process.exit(0);
+  // Check if ESC key was pressed (ASCII 27 or sequence starting with \x1b)
+  if (value && value.length > 0) {
+    // ESC key sends ASCII 27 (0x1B) or escape sequences starting with it
+    if (value[0] === 27 || (value.length >= 3 && value[0] === 0x1B)) {
+      console.log(chalk.red('\n✖ Migration cancelled'));
+      process.exit(0);
+    }
   }
 }
 
@@ -699,57 +1602,78 @@ async function main() {
   const stats = new MigrationStats();
   let extractedTempDir = null;
 
-  // Check if input is a zip file
-  const isZipFile = config.targetDir.toLowerCase().endsWith('.zip');
+  // Show header
+  console.log(chalk.blueBright.bold('💎 Notion 2 Obsidian') + ' ' + chalk.gray(`v${getVersion()}`) + '\n');
 
-  if (isZipFile) {
-    // Show header
-    console.log(chalk.blueBright.bold('💎 Notion 2 Obsidian') + ' ' + chalk.gray(`v${getVersion()}`) + '\n');
+  // Resolve glob patterns and validate paths
+  console.log(chalk.cyan('🔍 Resolving input paths...'));
+  const { resolvedPaths, errors } = await resolveGlobPatterns(config.targetPaths);
 
-    // Check if zip file exists
-    try {
-      await stat(config.targetDir);
-    } catch {
-      console.log(chalk.red(`Error: Zip file ${config.targetDir} does not exist`));
-      process.exit(1);
+  if (errors.length > 0) {
+    console.log(chalk.red('❌ Errors resolving paths:'));
+    errors.forEach(error => console.log(chalk.red(`  ${error}`)));
+    process.exit(1);
+  }
+
+  if (resolvedPaths.length === 0) {
+    console.log(chalk.red('❌ No valid paths found'));
+    process.exit(1);
+  }
+
+  // Separate zip files from directories
+  const zipFiles = [];
+  const directories = [];
+
+  for (const path of resolvedPaths) {
+    const pathStat = await stat(path);
+    if (pathStat.isFile() && path.toLowerCase().endsWith('.zip')) {
+      zipFiles.push(path);
+    } else if (pathStat.isDirectory()) {
+      directories.push(path);
+    } else {
+      console.log(chalk.yellow(`⚠ Skipping: ${path} (not a zip file or directory)`));
     }
+  }
 
-    // Extract zip to same directory (use sampling for dry-run)
+  let targetDir;
+
+  // Handle zip files
+  if (zipFiles.length > 0) {
+    console.log(chalk.blue(`Found ${zipFiles.length} zip file(s) to process`));
+    console.log();
+
     try {
-      const result = await extractZipToSameDirectory(config.targetDir, {
+      const result = await extractMultipleZips(zipFiles, {
         sample: config.dryRun,
         samplePercentage: 0.10,
-        maxSampleBytes: 10_000_000
+        maxSampleBytes: 10_000_000,
+        outputDir: config.outputDir
       });
-      extractedTempDir = result.extractDir;  // Store parent dir for cleanup
-      config.targetDir = result.path;        // Use subdirectory for migration
+
+      extractedTempDir = result.extractDir;
+      targetDir = result.path;
       config.zipSampleInfo = result.isSampled ? {
         sampled: result.sampleCount,
         total: result.totalCount
       } : null;
     } catch (err) {
-      console.log(chalk.red(`Error extracting zip file: ${err.message}`));
+      console.log(chalk.red(`Error extracting zip files: ${err.message}`));
       process.exit(1);
     }
-  } else {
-    // Check if directory exists
-    try {
-      await stat(config.targetDir);
-    } catch {
-      console.log(chalk.red(`Error: Directory ${config.targetDir} does not exist`));
-      process.exit(1);
-    }
+  } else if (directories.length === 1) {
+    // Single directory
+    targetDir = directories[0];
 
     // Check write permissions
     try {
-      await access(config.targetDir, constants.W_OK);
+      await access(targetDir, constants.W_OK);
     } catch {
-      console.log(chalk.red(`Error: No write permission for directory ${config.targetDir}`));
+      console.log(chalk.red(`Error: No write permission for directory ${targetDir}`));
       process.exit(1);
     }
 
     // Test actual write capability
-    const testFile = join(config.targetDir, `.notion2obsidian-test-${Date.now()}`);
+    const testFile = join(targetDir, `.notion2obsidian-test-${Date.now()}`);
     try {
       await writeFile(testFile, 'test');
       await rm(testFile);
@@ -759,7 +1683,7 @@ async function main() {
     }
 
     // Confirm if using current directory without explicit argument
-    if (!config.dirExplicitlyProvided) {
+    if (!config.pathsExplicitlyProvided) {
       const cwd = process.cwd();
       console.log(chalk.yellow('⚠ No directory specified. This will run on the current directory:'));
       console.log(chalk.blue(`  ${cwd}\n`));
@@ -770,10 +1694,16 @@ async function main() {
       reader.releaseLock();
       console.log();
     }
+  } else if (directories.length > 1) {
+    console.log(chalk.red('❌ Multiple directories not supported. Please specify zip files or a single directory.'));
+    process.exit(1);
+  } else {
+    console.log(chalk.red('❌ No valid input paths found'));
+    process.exit(1);
   }
 
   console.log(chalk.blueBright.bold('💎 Notion 2 Obsidian') + ' ' + chalk.gray(`v${getVersion()}`));
-  console.log(`Directory: ${chalk.blue(config.targetDir)}`);
+  console.log(`Directory: ${chalk.blue(targetDir)}`);
   if (config.dryRun) {
     console.log(chalk.yellow.bold('Mode: DRY RUN (no changes will be made)'));
   }
@@ -781,12 +1711,35 @@ async function main() {
 
   console.log(chalk.yellow('Phase 1: Analyzing files and building migration map...\n'));
 
+  // Debug: Show what's actually in the target directory
+  if (config.verbose || zipFiles.length > 0) {
+    console.log(chalk.cyan('🔍 Directory structure analysis:'));
+    try {
+      const entries = await readdir(targetDir);
+      console.log(chalk.gray(`  Target directory contains ${entries.length} items:`));
+      for (const entry of entries.slice(0, 10)) { // Show first 10 items
+        const entryPath = join(targetDir, entry);
+        const entryStat = await stat(entryPath).catch(() => null);
+        if (entryStat) {
+          const type = entryStat.isDirectory() ? '📁' : '📄';
+          console.log(chalk.gray(`    ${type} ${entry}`));
+        }
+      }
+      if (entries.length > 10) {
+        console.log(chalk.gray(`    ... and ${entries.length - 10} more items`));
+      }
+      console.log();
+    } catch (err) {
+      console.log(chalk.red(`  Error reading directory: ${err.message}\n`));
+    }
+  }
+
   // Scan for all files (excluding backups)
   const glob = new Glob("**/*.md");
   const files = [];
 
   for await (const file of glob.scan({
-    cwd: config.targetDir,
+    cwd: targetDir,
     absolute: true,
     dot: false
   })) {
@@ -797,7 +1750,7 @@ async function main() {
   }
 
   // Scan for all directories
-  const dirs = await getAllDirectories(config.targetDir);
+  const dirs = await getAllDirectories(targetDir);
 
   stats.totalFiles = files.length;
 
@@ -841,7 +1794,7 @@ async function main() {
   }
 
   // Build file map for link resolution
-  const fileMap = buildFileMap(files, config.targetDir);
+  const fileMap = buildFileMap(files, targetDir);
 
   // Build migration maps
   const fileMigrationMap = [];
@@ -854,7 +1807,7 @@ async function main() {
     const cleanedName = cleanName(filename);
     const notionId = extractNotionId(filename);
 
-    const tags = getTagsFromPath(filePath, config.targetDir);
+    const tags = getTagsFromPath(filePath, targetDir);
 
     // Build aliases
     const aliases = [];
@@ -937,8 +1890,8 @@ async function main() {
   if (fileMigrationMap.length > 0) {
     const sample = fileMigrationMap[0];
     console.log(`\nFor file: ${chalk.blue(sample.newName)}\n`);
-    const relativePath = relative(config.targetDir, dirname(sample.oldPath));
-    console.log(chalk.gray(generateFrontmatter(sample.metadata, relativePath)));
+    const relativePath = relative(targetDir, dirname(sample.oldPath));
+    console.log(chalk.gray(generateValidFrontmatter(sample.metadata, relativePath)));
   }
 
   // Build directory name mapping for asset path updates
@@ -952,7 +1905,7 @@ async function main() {
   const sampleSize = Math.min(10, fileMigrationMap.length);
   for (let i = 0; i < sampleSize; i++) {
     const sample = fileMigrationMap[i];
-    const { linkCount } = await processFileContent(sample.oldPath, sample.metadata, fileMap, config.targetDir, dirNameMap);
+    const { linkCount } = await processFileContent(sample.oldPath, sample.metadata, fileMap, targetDir, dirNameMap);
     estimatedLinkCount += linkCount;
   }
   const avgLinksPerFile = sampleSize > 0 ? estimatedLinkCount / sampleSize : 0;
@@ -992,7 +1945,7 @@ async function main() {
 
     const results = await Promise.all(
       batch.map(file =>
-        updateFileContent(file.oldPath, file.metadata, fileMap, config.targetDir, dirNameMap)
+        updateFileContent(file.oldPath, file.metadata, fileMap, targetDir, dirNameMap)
       )
     );
 
@@ -1000,6 +1953,7 @@ async function main() {
       if (result.success) {
         stats.processedFiles++;
         stats.totalLinks += result.linkCount;
+        stats.calloutsConverted += result.calloutsConverted || 0;
       } else {
         stats.addNamingConflict(batch[idx].oldPath, result.error);
       }
@@ -1039,7 +1993,6 @@ async function main() {
         file.newPath = newMdPath; // Already at final name
 
         // Normalize and rename image files in the attachment folder
-        const { readdir } = await import('node:fs/promises');
         const filesInFolder = await readdir(potentialAttachmentFolder);
 
         // Common image extensions
@@ -1148,10 +2101,14 @@ async function main() {
           alternativePath = join(parentDir, `${dirName}-${counter}`);
         }
         await rename(dir.oldPath, alternativePath);
+        // Update the actual final path in the map
+        dir.actualNewPath = alternativePath;
         stats.addNamingConflict(dir.oldPath, `Target exists, renamed to ${basename(alternativePath)}`);
         stats.renamedDirs++;
       } else {
         await rename(dir.oldPath, dir.newPath);
+        // Track the actual final path
+        dir.actualNewPath = dir.newPath;
         stats.renamedDirs++;
       }
     } catch (err) {
@@ -1161,20 +2118,83 @@ async function main() {
 
   console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedDirs} directories\n`);
 
-  // Step 4: Normalize all images and references
-  const { readdir } = await import('node:fs/promises');
+  // Update file paths in fileMigrationMap to reflect renamed directories
+  // Process directories from deepest to shallowest to handle nested renames correctly
+  for (const file of fileMigrationMap) {
+    let originalPath = file.oldPath;
+    for (const dir of dirMigrationMap) {
+      if (file.oldPath.startsWith(dir.oldPath + '/') && dir.actualNewPath) {
+        file.oldPath = file.oldPath.replace(dir.oldPath, dir.actualNewPath);
+        // Don't break - a file might be affected by multiple directory renames
+      }
+    }
+    // Debug logging for problematic files
+    if (originalPath !== file.oldPath && config.verbose) {
+      console.log(`    Updated file path: ${originalPath} → ${file.oldPath}`);
+    }
+  }
+
+  // Step 4: Rename individual files that weren't moved to attachment folders
+  console.log(chalk.green('Step 4: Renaming individual files...'));
+
+  for (const file of fileMigrationMap) {
+    // Skip files that were already moved into attachment folders
+    if (filesMovedIntoFolders.has(file.oldPath)) {
+      continue;
+    }
+
+    // Skip files that don't need renaming
+    if (!file.needsRename) {
+      continue;
+    }
+
+    try {
+      const oldPath = file.oldPath;
+      const newPath = join(dirname(oldPath), file.newName);
+
+      // Check if target already exists
+      if (await stat(newPath).catch(() => false)) {
+        // File exists - create alternative name
+        const baseName = basename(file.newName, extname(file.newName));
+        const extension = extname(file.newName);
+        const dir = dirname(oldPath);
+        let counter = 1;
+        let alternativeName = `${baseName}-${counter}${extension}`;
+        let alternativePath = join(dir, alternativeName);
+
+        while (await stat(alternativePath).catch(() => false)) {
+          counter++;
+          alternativeName = `${baseName}-${counter}${extension}`;
+          alternativePath = join(dir, alternativeName);
+        }
+
+        await rename(oldPath, alternativePath);
+        stats.addNamingConflict(oldPath, `Target exists, renamed to ${alternativeName}`);
+        stats.renamedFiles++;
+      } else {
+        await rename(oldPath, newPath);
+        stats.renamedFiles++;
+      }
+    } catch (error) {
+      console.warn(chalk.yellow(`    ⚠ Failed to rename ${file.oldPath}: ${error.message}`));
+    }
+  }
+
+  console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedFiles} individual files\n`);
+
+  // Step 5: Normalize all images and references
   const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico'];
 
-  // Step 4a: Normalize ALL image files in ALL directories
-  console.log(chalk.green('Step 4a: Normalizing all image files...'));
+  // Step 5a: Normalize ALL image files in ALL directories
+  console.log(chalk.green('Step 5a: Normalizing all image files...'));
 
   let normalizedImages = 0;
 
   // Get all directories
-  const allDirs = [config.targetDir];
+  const allDirs = [targetDir];
   const dirGlob = new Glob('**/', { onlyFiles: false });
-  for (const dir of dirGlob.scanSync(config.targetDir)) {
-    allDirs.push(join(config.targetDir, dir));
+  for (const dir of dirGlob.scanSync(targetDir)) {
+    allDirs.push(join(targetDir, dir));
   }
 
   // Normalize images in each directory
@@ -1218,12 +2238,12 @@ async function main() {
 
   console.log(`  ${chalk.green('✓')} Normalized ${normalizedImages} image files\n`);
 
-  // Step 4b: Update all image references using remark (proper markdown parsing)
-  console.log(chalk.green('Step 4b: Normalizing all image references...'));
+  // Step 5b: Update all image references using remark (proper markdown parsing)
+  console.log(chalk.green('Step 5b: Normalizing all image references...'));
 
   const { unified } = await import('unified');
-  const remarkParse = await import('remark-parse');
-  const remarkStringify = await import('remark-stringify');
+  const { remark } = await import('remark');
+  const remarkFrontmatter = await import('remark-frontmatter');
   const { visit } = await import('unist-util-visit');
 
   // Build a map of old folder names → new folder names (without Notion IDs)
@@ -1249,10 +2269,10 @@ async function main() {
 
   // Process all MD files
   const mdGlob = new Glob('**/*.md');
-  const allMdFiles = Array.from(mdGlob.scanSync(config.targetDir));
+  const allMdFiles = Array.from(mdGlob.scanSync(targetDir));
 
   for (const mdFile of allMdFiles) {
-    const mdPath = join(config.targetDir, mdFile);
+    const mdPath = join(targetDir, mdFile);
     const mdDir = dirname(mdPath);
     const content = await Bun.file(mdPath).text();
 
@@ -1260,8 +2280,8 @@ async function main() {
     let hasChanges = false;
 
     // Parse markdown to AST and transform
-    const processor = unified()
-      .use(remarkParse.default)
+    const processor = remark()
+      .use(remarkFrontmatter.default, ['yaml'])
       .use(() => (tree) => {
         visit(tree, 'image', (node) => {
           const url = node.url;
@@ -1321,12 +2341,16 @@ async function main() {
             }
           }
         });
-      })
-      .use(remarkStringify.default);
+      });
 
     // Always process to run the transformations
     const result = await processor.process(content);
-    const newContent = String(result);
+    let newContent = String(result);
+
+    // Fix callout syntax and wiki links that get escaped by remark
+    newContent = newContent.replace(/\\(\[![\w-]+\])/g, '$1'); // Fix callout brackets
+    newContent = newContent.replace(/\\(\[)/g, '$1'); // Fix any escaped opening bracket
+    newContent = newContent.replace(/\\(\])/g, '$1'); // Fix any escaped closing bracket
 
     // Only write if content actually changed
     if (newContent !== content) {
@@ -1336,11 +2360,85 @@ async function main() {
 
   console.log(`  ${chalk.green('✓')} Normalized ${updatedReferences} image references\n`);
 
+  // Step 6: Process CSV databases if enabled
+  if (config.processCsv) {
+    console.log(chalk.green(config.dataviewMode ?
+      'Step 6: Processing CSV databases with Dataview support...' :
+      'Step 6: Processing CSV databases...'));
+
+    const csvFiles = await processCsvDatabases(targetDir);
+    let csvIndexesCreated = 0;
+    let totalNotesCreated = 0;
+
+    // Create _databases folder if in Dataview mode
+    let databasesDir = null;
+    if (config.dataviewMode && csvFiles.length > 0) {
+      databasesDir = join(targetDir, '_databases');
+      await mkdir(databasesDir, { recursive: true });
+    }
+
+    for (const csvInfo of csvFiles) {
+      try {
+        if (config.dataviewMode) {
+          // Dataview mode: Copy CSV to _databases folder and create individual notes
+          const csvDestPath = join(databasesDir, csvInfo.fileName);
+          await copyFile(csvInfo.path, csvDestPath);
+
+          // Create individual notes from CSV rows
+          const createdNotes = await createNotesFromCsvRows(csvInfo, targetDir, databasesDir);
+          totalNotesCreated += createdNotes.length;
+
+          // Generate Dataview index
+          const indexMarkdown = generateDataviewIndex(csvInfo, targetDir, createdNotes);
+          const indexPath = join(targetDir, `${csvInfo.databaseName}_Index.md`);
+          await Bun.write(indexPath, indexMarkdown);
+
+          if (config.verbose) {
+            console.log(`    ✓ Created ${createdNotes.length} notes and Dataview index for ${csvInfo.databaseName}`);
+          }
+        } else {
+          // Traditional mode: Create static table index
+          const indexMarkdown = generateDatabaseIndex(csvInfo, targetDir);
+          const indexPath = join(dirname(csvInfo.path), `${csvInfo.databaseName}_Index.md`);
+          await Bun.write(indexPath, indexMarkdown);
+
+          if (config.verbose) {
+            console.log(`    ✓ Created index for ${csvInfo.databaseName} (${csvInfo.recordCount} records)`);
+          }
+        }
+
+        csvIndexesCreated++;
+      } catch (error) {
+        console.warn(chalk.yellow(`    ⚠ Failed to process ${csvInfo.databaseName}: ${error.message}`));
+      }
+    }
+
+    stats.csvFilesProcessed = csvFiles.length;
+    stats.csvIndexesCreated = csvIndexesCreated;
+
+    if (config.dataviewMode && totalNotesCreated > 0) {
+      stats.csvNotesCreated = totalNotesCreated;
+      console.log(`  ${chalk.green('✓')} Processed ${csvFiles.length} CSV files, created ${totalNotesCreated} individual notes and ${csvIndexesCreated} Dataview indexes\n`);
+    } else {
+      console.log(`  ${chalk.green('✓')} Processed ${csvFiles.length} CSV files, created ${csvIndexesCreated} database indexes\n`);
+    }
+  }
+
   // Final summary
   console.log(chalk.green.bold('✅ Migration complete!\n'));
   console.log(chalk.white('Summary:'));
   console.log(`   📄 Added frontmatter to ${chalk.cyan(stats.processedFiles)} files`);
   console.log(`   🔗 Converted ${chalk.cyan(stats.totalLinks)} markdown links to wiki links`);
+  if (stats.calloutsConverted > 0) {
+    console.log(`   💬 Converted ${chalk.cyan(stats.calloutsConverted)} Notion callouts to Obsidian format`);
+  }
+  if (stats.csvIndexesCreated > 0) {
+    if (config.dataviewMode && stats.csvNotesCreated > 0) {
+      console.log(`   📊 Created ${chalk.cyan(stats.csvNotesCreated)} individual notes and ${chalk.cyan(stats.csvIndexesCreated)} Dataview indexes from ${stats.csvFilesProcessed} CSV files`);
+    } else {
+      console.log(`   📊 Created ${chalk.cyan(stats.csvIndexesCreated)} database index pages from ${stats.csvFilesProcessed} CSV files`);
+    }
+  }
   console.log(`   ✏️  Renamed ${chalk.cyan(stats.renamedFiles)} files`);
   console.log(`   📁 Renamed ${chalk.cyan(stats.renamedDirs)} directories`);
   if (movedFiles > 0) {
@@ -1362,17 +2460,22 @@ async function main() {
   console.log(chalk.gray('   • Original filenames stored as aliases'));
   console.log(chalk.gray('   • URL-encoded links converted to wiki links'));
 
-  console.log(chalk.cyan.bold('\n🎉 Your Notion export is now ready for Obsidian!'));
+  // Open the final directory automatically
+  await openDirectory(targetDir);
 
-  // Show directory path
-  const fullPath = require('node:path').resolve(config.targetDir);
-  console.log(`Open directory: ${chalk.blue(fullPath)}`);
+  console.log(chalk.yellow('💡 Scroll up to review the full migration summary and any warnings.'));
 
-  console.log(chalk.yellow('\n💡 Scroll up to review the full migration summary and any warnings.'));
-
-  // Show extracted directory info if zip was extracted
-  if (extractedTempDir) {
-    await showExtractedDirectoryInfo(extractedTempDir);
+  // Clean up temporary extraction directory if zip was extracted
+  if (extractedTempDir && !config.dryRun) {
+    try {
+      await rm(extractedTempDir, { recursive: true, force: true });
+      console.log(chalk.gray(`\n🗑️  Cleaned up temporary extraction directory`));
+    } catch (err) {
+      console.log(chalk.yellow(`\n⚠️  Could not clean up temporary directory: ${extractedTempDir}`));
+    }
+  } else if (extractedTempDir && config.dryRun) {
+    console.log(chalk.gray(`\n📁 Temporary extraction directory: ${chalk.blue(extractedTempDir)}`));
+    console.log(chalk.gray(`   To remove after migration, run: ${chalk.white(`rm -rf "${extractedTempDir}"`)}`));
   }
 }
 

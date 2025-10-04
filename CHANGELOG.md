@@ -9,6 +9,40 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.3.0] - 2025-10-04 - Enhanced Database & Visual Element Support
+
+### ✨ New Features
+- **Dataview Integration**: New `--dataview` flag creates individual notes from CSV rows with query-based indexes
+- **CSV Database Processing**: Converts Notion database exports to Obsidian-compatible formats
+- **Notion Callout Conversion**: Transforms Notion callouts with icons to Obsidian format (18+ icon mappings)
+- **Cover Image Support**: Detects and preserves Notion cover images as banner frontmatter
+- **Multiple Zip File Support**: Process multiple zip files with glob patterns (*.zip, Export-*.zip)
+- **Custom Output Directory**: New `-o, --output DIR` parameter to specify where processed files should go
+- **Automatic Directory Opening**: Automatically opens the completed migration directory (no user input required)
+- **Enhanced File Progress Display**: Shortened long filenames in progress display (shows first part + last 5 characters)
+
+### 🔧 Improvements
+- **Robust Frontmatter Handling**: Replaced regex-based processing with gray-matter library for bulletproof YAML generation
+- **Enhanced Visual Element Processing**: Comprehensive icon-to-callout mapping with 18+ Notion icons
+- **Database Structure Options**: Traditional static tables vs. Dataview-compatible individual notes
+- **Flexible Feature Control**: New flags `--no-callouts`, `--no-csv`, `--no-banners` for granular control
+- **Better UX**: Cleaner spacing and progress messages during extraction
+- **Automatic Cleanup**: Removes temporary extraction directories after successful migration
+
+### 🐛 Bug Fixes
+- **Fixed Callout Bracket Escaping**: Resolved issue where Obsidian callouts `[!note]` were incorrectly escaped to `\[!note]` during remark processing
+- **Fixed File Path Updates**: Improved directory renaming logic to correctly update file paths for nested directory structures
+- **Enhanced ENOENT Error Handling**: Fixed file renaming errors that occurred when directories were renamed before individual files
+- **Fixed Frontmatter Format**: Changed `notion-alias` to `aliases` for proper Obsidian compatibility
+- **Enhanced ESC Key Detection**: Improved cancellation handling for better terminal compatibility
+- **Smarter Subdirectory Detection**: Better handling of complex nested directory structures
+
+### 📚 Documentation
+- Updated README.md with comprehensive Dataview and database feature documentation
+- Added new callout and visual element processing sections
+- Updated help text with all new command line options
+- Added examples for Dataview mode and feature control flags
+
 ## [2.2.1] - 2025-10-02 - Documentation Update
 
 ### 📚 Documentation
