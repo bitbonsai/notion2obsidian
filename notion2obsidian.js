@@ -1542,10 +1542,13 @@ async function extractMultipleZips(zipPaths, options = {}) {
 }
 
 
-async function openDirectory(dirPath) {
+async function openDirectory(dirPath, migrationTime, sizeStr) {
   const fullPath = resolve(dirPath);
 
   console.log(chalk.cyan.bold('\n🎉 Migration Complete!'));
+  if (migrationTime && sizeStr) {
+    console.log(`Time: ${chalk.green(migrationTime + 's')}  •  Size: ${chalk.green(sizeStr)}`);
+  }
   console.log(`Directory: ${chalk.blue(fullPath)}`);
   console.log(chalk.gray('\nYour Notion export is now ready for Obsidian!'));
 
@@ -2613,7 +2616,7 @@ async function main() {
   console.log(chalk.gray('   • URL-encoded links converted to wiki links'));
 
   // Open the final directory automatically
-  await openDirectory(targetDir);
+  await openDirectory(targetDir, migrationTime, sizeStr);
 
   console.log(chalk.yellow('💡 Scroll up to review the full migration summary and any warnings.'));
 
