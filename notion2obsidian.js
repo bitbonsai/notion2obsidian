@@ -1941,6 +1941,9 @@ async function main() {
 
   console.log(chalk.yellow.bold('\nPhase 2: Executing migration...\n'));
 
+  // Start timer
+  const migrationStartTime = Date.now();
+
   // Step 1: Add frontmatter and convert links
   console.log(chalk.green('Step 1: Adding frontmatter and converting links...'));
 
@@ -2510,8 +2513,43 @@ async function main() {
     }
   }
 
+  // Calculate migration time and size
+  const migrationTime = ((Date.now() - migrationStartTime) / 1000).toFixed(1);
+
+  // Calculate total size of migrated directory
+  let totalSize = 0;
+  const calculateSize = async (dir) => {
+    try {
+      const entries = await readdir(dir, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          await calculateSize(fullPath);
+        } else if (entry.isFile()) {
+          const stats = await stat(fullPath);
+          totalSize += stats.size;
+        }
+      }
+    } catch (err) {
+      // Ignore errors
+    }
+  };
+  await calculateSize(targetDir);
+
+  // Format size (bytes → GB/MB)
+  let sizeStr;
+  if (totalSize >= 1024**3) {
+    sizeStr = `${(totalSize / (1024**3)).toFixed(2)} GB`;
+  } else if (totalSize >= 1024**2) {
+    sizeStr = `${(totalSize / (1024**2)).toFixed(2)} MB`;
+  } else if (totalSize >= 1024) {
+    sizeStr = `${(totalSize / 1024).toFixed(2)} KB`;
+  } else {
+    sizeStr = `${totalSize} bytes`;
+  }
+
   // Final summary
-  console.log(chalk.green.bold('✅ Migration complete!\n'));
+  console.log(chalk.green.bold(`✅ Migration complete! Processed ${sizeStr} in ${migrationTime} seconds\n`));
   console.log(chalk.white('Summary:'));
   console.log(`   📄 Added frontmatter to ${chalk.cyan(stats.processedFiles)} files`);
   console.log(`   🔗 Converted ${chalk.cyan(stats.totalLinks)} markdown links to wiki links`);
