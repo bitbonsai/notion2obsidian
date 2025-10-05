@@ -207,6 +207,10 @@ body::before {
     height: 48px;
 }
 
+.btn:hover {
+    text-decoration: none;
+}
+
 .btn-primary {
     background: var(--color-primary);
     color: white;
@@ -215,7 +219,9 @@ body::before {
 
 .btn-primary:hover {
     background: #6d3cc9;
+    color: white;
     transform: translateY(-2px);
+    text-decoration: none;
 }
 
 .btn-secondary {
@@ -227,6 +233,8 @@ body::before {
 .btn-secondary:hover {
     border-color: var(--color-primary);
     background: rgba(130, 80, 231, 0.1);
+    color: var(--color-text);
+    text-decoration: none;
 }
 
 /* Terminal */
