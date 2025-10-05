@@ -4,7 +4,7 @@
   "description": "Optimized tool to migrate Notion exports to Obsidian-compatible format",
   "type": "module",
   "bin": {
-    "notion2obsidian": "./notion2obsidian.js"
+    "notion2obsidian": "notion2obsidian.js"
   },
   "scripts": {
     "migrate": "bun run notion2obsidian.js",
