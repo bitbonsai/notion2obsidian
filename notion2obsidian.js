@@ -2463,28 +2463,49 @@ async function main() {
           }
 
           // Keep only _all.csv and rename to {databaseName}.csv
-          const allCsvPath = csvInfo.path.replace(/\.csv$/, '_all.csv');
+          const currentFileName = basename(csvInfo.path);
           const finalCsvPath = join(baseDir, `${csvInfo.databaseName}.csv`);
+          let csvToUse = csvInfo.path;
 
-          try {
-            statSync(allCsvPath);
+          // Check if current file ends with _all.csv
+          if (currentFileName.endsWith('_all.csv')) {
+            // Current file is the _all version, use it
+            csvToUse = csvInfo.path;
 
-            // _all.csv exists, use it and remove the other
-            if (allCsvPath !== finalCsvPath) {
-              await copyFile(allCsvPath, finalCsvPath);
-              await rm(allCsvPath);
-
-              // Remove the non-_all version if it's different
-              if (csvInfo.path !== finalCsvPath && csvInfo.path !== allCsvPath) {
-                try {
-                  await rm(csvInfo.path);
-                } catch (e) { /* ignore */ }
-              }
+            // Check if there's also a non-_all version to remove
+            const nonAllPath = csvInfo.path.replace(/_all\.csv$/, '.csv');
+            if (nonAllPath !== csvInfo.path) {
+              try {
+                await rm(nonAllPath).catch(() => {});
+              } catch (e) { /* ignore */ }
             }
-          } catch (error) {
-            // _all.csv doesn't exist, rename the current one
-            if (csvInfo.path !== finalCsvPath) {
-              await rename(csvInfo.path, finalCsvPath);
+          } else {
+            // Current file is NOT _all, check if _all version exists
+            const allCsvPath = csvInfo.path.replace(/\.csv$/, '_all.csv');
+
+            try {
+              statSync(allCsvPath);
+              // _all version exists, use it instead
+              csvToUse = allCsvPath;
+
+              // Remove the non-_all version
+              try {
+                await rm(csvInfo.path).catch(() => {});
+              } catch (e) { /* ignore */ }
+            } catch (error) {
+              // _all doesn't exist, use current file
+              csvToUse = csvInfo.path;
+            }
+          }
+
+          // Rename to final destination
+          if (csvToUse !== finalCsvPath) {
+            try {
+              await rename(csvToUse, finalCsvPath);
+            } catch (error) {
+              // If file doesn't exist or rename fails, log warning
+              console.warn(chalk.yellow(`    ⚠ Could not rename ${basename(csvToUse)}: ${error.message}`));
+              continue; // Skip to next CSV file
             }
           }
 
