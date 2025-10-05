@@ -133,6 +133,8 @@ The tool can directly process Notion zip exports:
 
 ## 📊 Database & Dataview Support
 
+> **📦 Required Plugin**: Install the [Dataview plugin](https://github.com/blacksmithgu/obsidian-dataview) in Obsidian to view and query database records. Without it, you'll only see the raw Dataview query code.
+
 ### CSV Database Processing (Default Mode)
 
 When your Notion export includes CSV database files, the tool organizes them for optimal Dataview integration:
