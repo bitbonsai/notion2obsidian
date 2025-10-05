@@ -1816,15 +1816,33 @@ async function main() {
     let cleanedName = cleanName(filename);
     const notionId = extractNotionId(filename);
 
-    // Remove trailing -\d+ suffix if basename matches parent directory
-    // This handles Notion's collision naming (e.g., Atlassian/Atlassian-1.md -> Atlassian/Atlassian.md)
-    const parentDir = basename(dirname(filePath));
-    const cleanedParentDir = cleanDirName(parentDir);
+    // Remove trailing -\d+ suffix if it matches a sibling or parent directory
+    // This handles Notion's collision naming (e.g., Atlassian-1.md when there's an Atlassian/ folder)
     const nameWithoutExt = cleanedName.replace(/\.md$/, '');
     const trailingNumberMatch = nameWithoutExt.match(/^(.+)-(\d+)$/);
 
-    if (trailingNumberMatch && trailingNumberMatch[1] === cleanedParentDir) {
-      cleanedName = trailingNumberMatch[1] + '.md';
+    if (trailingNumberMatch) {
+      const baseName = trailingNumberMatch[1];
+
+      // Check if file is inside a directory with matching name
+      const parentDir = basename(dirname(filePath));
+      const cleanedParentDir = cleanDirName(parentDir);
+
+      if (baseName === cleanedParentDir) {
+        cleanedName = baseName + '.md';
+      } else {
+        // Check if there's a sibling directory that will receive this file
+        const mdFileBase = basename(filePath, '.md');
+        const siblingDirPath = join(dirname(filePath), mdFileBase);
+
+        // If sibling directory exists, the file will be moved into it in Step 2
+        if (dirs.includes(siblingDirPath)) {
+          const cleanedSiblingDir = cleanDirName(basename(siblingDirPath));
+          if (baseName === cleanedSiblingDir) {
+            cleanedName = baseName + '.md';
+          }
+        }
+      }
     }
 
     const tags = getTagsFromPath(filePath, targetDir);
@@ -2009,11 +2027,13 @@ async function main() {
         if (file.needsRename) {
           stats.renamedFiles++; // Count file renames
         }
-        filesMovedIntoFolders.add(file.oldPath);
 
         // Update file paths in the migration map
         file.oldPath = newMdPath;
         file.newPath = newMdPath; // Already at final name
+
+        // Add the NEW path (after moving) to the set
+        filesMovedIntoFolders.add(newMdPath);
 
         // Normalize and rename image files in the attachment folder
         const filesInFolder = await readdir(potentialAttachmentFolder);
@@ -2141,8 +2161,9 @@ async function main() {
 
   console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedDirs} directories\n`);
 
-  // Update file paths in fileMigrationMap to reflect renamed directories
+  // Update file paths in fileMigrationMap and filesMovedIntoFolders to reflect renamed directories
   // Process directories from deepest to shallowest to handle nested renames correctly
+  const updatedMovedFiles = new Set();
   for (const file of fileMigrationMap) {
     let originalPath = file.oldPath;
     for (const dir of dirMigrationMap) {
@@ -2155,6 +2176,15 @@ async function main() {
     if (originalPath !== file.oldPath && config.verbose) {
       console.log(`    Updated file path: ${originalPath} → ${file.oldPath}`);
     }
+    // Update the filesMovedIntoFolders set with new paths
+    if (filesMovedIntoFolders.has(originalPath)) {
+      updatedMovedFiles.add(file.oldPath);
+    }
+  }
+  // Replace the old set with updated paths
+  filesMovedIntoFolders.clear();
+  for (const path of updatedMovedFiles) {
+    filesMovedIntoFolders.add(path);
   }
 
   // Step 4: Rename individual files that weren't moved to attachment folders
