@@ -1,13 +1,25 @@
 ---
 title: "CHANGELOG"
 created: 2025-10-02
-modified: 2025-10-02
+modified: 2025-10-05
 published: false
 ---
 
 # Changelog
 
 All notable changes to the Notion to Obsidian Migration Tool.
+
+## [2.3.3] - 2025-10-05 - Enhanced Collision Handling
+
+### 🐛 Bug Fixes
+- **Fixed path tracking after directory renames**: Files moved into attachment folders in Step 2 are now properly tracked after directories are renamed in Step 3, preventing duplicate `-1` suffixes
+- **Improved collision detection**: Enhanced logic to detect when files should be moved into matching directories instead of receiving number suffixes
+
+### 🔧 Improvements
+- **Better file organization**: Files that collide with directory names are now consistently moved into those directories across all migration steps
+- **Cleaner output**: Eliminated spurious `-1` suffixes that appeared when file paths weren't properly updated after directory renames
+
+---
 
 ## [2.3.2] - 2025-10-05 - Collision Handling Improvements
 
