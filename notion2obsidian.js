@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 
 import { Glob } from "bun";
-import { stat, readdir, rename, copyFile, mkdir, rm, writeFile, lstat, realpath, access, constants, statSync, readdirSync, readFileSync } from "node:fs/promises";
+import { stat, readdir, rename, copyFile, mkdir, rm, writeFile, lstat, realpath, access, constants } from "node:fs/promises";
+import { statSync, readdirSync, readFileSync } from "node:fs";
 import { join, dirname, basename, extname, relative, sep, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { homedir } from "node:os";
