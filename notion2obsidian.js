@@ -2501,9 +2501,15 @@ async function main() {
           // Rename to final destination
           if (csvToUse !== finalCsvPath) {
             try {
+              // Check if source file exists before renaming
+              statSync(csvToUse);
               await rename(csvToUse, finalCsvPath);
             } catch (error) {
-              // If file doesn't exist or rename fails, log warning
+              // If file doesn't exist, it was likely already processed - skip silently
+              if (error.code === 'ENOENT') {
+                continue;
+              }
+              // For other errors, log warning
               console.warn(chalk.yellow(`    ⚠ Could not rename ${basename(csvToUse)}: ${error.message}`));
               continue; // Skip to next CSV file
             }
