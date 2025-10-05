@@ -131,12 +131,6 @@ body::before {
     color: var(--color-success);
 }
 
-.badge-tests {
-    background: rgba(0, 184, 99, 0.1);
-    border: 1px solid rgba(0, 184, 99, 0.3);
-    color: #00B863;
-}
-
 .hero-logo {
     width: 80px;
     height: 80px;
@@ -826,6 +820,18 @@ body::before {
     display: flex;
     gap: 1rem;
     align-items: center;
+}
+
+/* Content links */
+a {
+    color: var(--color-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+a:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
 }
 
 .footer-links a {
