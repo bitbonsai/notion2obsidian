@@ -1,6 +1,6 @@
 {
   "name": "notion2obsidian",
-  "version": "2.3.2,
+  "version": "2.3.2",
   "description": "Optimized tool to migrate Notion exports to Obsidian-compatible format",
   "type": "module",
   "bin": {
