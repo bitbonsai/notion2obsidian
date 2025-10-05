@@ -611,3 +611,158 @@ describe("Obsidian Compatibility", () => {
     expect(parsed.data.completion).toBe(75);
   });
 });
+
+describe("Database Index Generation", () => {
+  function generateDatabaseIndex(csvInfo) {
+    const { databaseName, header, rows } = csvInfo;
+    const relativeCsvPath = `${databaseName}.csv`;
+
+    let markdown = `# ${databaseName}\n\n`;
+    markdown += `Database with ${rows.length} records.\n\n`;
+    markdown += `**CSV File:** [[${relativeCsvPath}|Open in spreadsheet app]]\n\n`;
+    markdown += `## All Records\n\n`;
+    markdown += '```dataview\n';
+    markdown += 'TABLE WITHOUT ID ';
+    const displayColumns = header.slice(0, 5);
+    markdown += displayColumns.join(', ') + '\n';
+    markdown += `FROM csv("${relativeCsvPath}")\n`;
+    markdown += '```\n\n';
+
+    return markdown;
+  }
+
+  test("should generate Dataview index with CSV link", () => {
+    const csvInfo = {
+      databaseName: "Tasks",
+      header: ["Task name", "Status", "Assignee", "Due", "Priority", "Summary"],
+      rows: [
+        ["Task 1", "Done", "John", "2024-01-01", "High", "Description"],
+        ["Task 2", "In Progress", "Jane", "2024-01-15", "Medium", "Description"]
+      ]
+    };
+
+    const index = generateDatabaseIndex(csvInfo);
+
+    expect(index).toContain("# Tasks");
+    expect(index).toContain("Database with 2 records");
+    expect(index).toContain("**CSV File:** [[Tasks.csv|Open in spreadsheet app]]");
+    expect(index).toContain("```dataview");
+    expect(index).toContain('TABLE WITHOUT ID Task name, Status, Assignee, Due, Priority');
+    expect(index).toContain('FROM csv("Tasks.csv")');
+  });
+
+  test("should handle long header lists", () => {
+    const csvInfo = {
+      databaseName: "Projects",
+      header: ["Name", "Status", "Owner", "Due Date", "Priority", "Tags", "Notes", "Progress"],
+      rows: [["Project 1", "Active", "Alice", "2024-12-31", "High", "work", "Notes", "50%"]]
+    };
+
+    const index = generateDatabaseIndex(csvInfo);
+
+    // Should only show first 5 columns
+    expect(index).toContain('TABLE WITHOUT ID Name, Status, Owner, Due Date, Priority');
+    expect(index).not.toContain('Tags, Notes, Progress');
+  });
+
+  test("should handle empty databases", () => {
+    const csvInfo = {
+      databaseName: "Empty Database",
+      header: ["Column1", "Column2"],
+      rows: []
+    };
+
+    const index = generateDatabaseIndex(csvInfo);
+
+    expect(index).toContain("Database with 0 records");
+    expect(index).toContain("```dataview");
+  });
+});
+
+describe("File Naming Collision Resolution", () => {
+  function resolveNamingCollision(baseName, ext, isDirectoryConflict) {
+    if (isDirectoryConflict) {
+      return `${baseName} Overview${ext}`;
+    }
+    return `${baseName}-1${ext}`;
+  }
+
+  test("should add Overview suffix when directory exists with same name", () => {
+    const result = resolveNamingCollision("odara com au", ".md", true);
+    expect(result).toBe("odara com au Overview.md");
+  });
+
+  test("should add -1 suffix when file exists with same name", () => {
+    const result = resolveNamingCollision("Document", ".md", false);
+    expect(result).toBe("Document-1.md");
+  });
+
+  test("should handle different extensions", () => {
+    expect(resolveNamingCollision("Home", ".md", true)).toBe("Home Overview.md");
+    expect(resolveNamingCollision("Image", ".png", true)).toBe("Image Overview.png");
+  });
+
+  test("should preserve spaces in names", () => {
+    const result = resolveNamingCollision("My Project Notes", ".md", true);
+    expect(result).toBe("My Project Notes Overview.md");
+  });
+});
+
+describe("CSV File Consolidation", () => {
+  function shouldKeepCsvFile(filename) {
+    // Keep only _all.csv files or files without _all suffix
+    return filename.endsWith("_all.csv") || !filename.includes("_all");
+  }
+
+  function getCleanCsvName(filename) {
+    // Remove Notion IDs and _all suffix
+    return filename
+      .replace(/\s[0-9a-fA-F]{32}(_all)?\.csv$/, '.csv')
+      .replace(/_all\.csv$/, '.csv');
+  }
+
+  test("should prefer _all.csv files", () => {
+    expect(shouldKeepCsvFile("Tasks abc123_all.csv")).toBe(true);
+    expect(shouldKeepCsvFile("Tasks abc123.csv")).toBe(true);
+  });
+
+  test("should clean CSV filenames", () => {
+    expect(getCleanCsvName("Tasks abc123def456789012345678901234ab_all.csv")).toBe("Tasks.csv");
+    expect(getCleanCsvName("Tasks abc123def456789012345678901234ab.csv")).toBe("Tasks.csv");
+    expect(getCleanCsvName("Odara - pages 22d801a180b548f0a1536b1a9d172dde_all.csv"))
+      .toBe("Odara - pages.csv");
+  });
+
+  test("should handle names without Notion IDs", () => {
+    expect(getCleanCsvName("database_all.csv")).toBe("database.csv");
+    expect(getCleanCsvName("simple.csv")).toBe("simple.csv");
+  });
+});
+
+describe("Database Folder Organization", () => {
+  function shouldMoveToDataFolder(filename) {
+    return filename.endsWith('.md');
+  }
+
+  function getDataFolderPath(dbName) {
+    return `${dbName}/_data`;
+  }
+
+  test("should identify MD files for _data folder", () => {
+    expect(shouldMoveToDataFolder("page.md")).toBe(true);
+    expect(shouldMoveToDataFolder("About.md")).toBe(true);
+    expect(shouldMoveToDataFolder("Privacy policy.md")).toBe(true);
+  });
+
+  test("should not move non-MD files", () => {
+    expect(shouldMoveToDataFolder("data.csv")).toBe(false);
+    expect(shouldMoveToDataFolder("image.png")).toBe(false);
+    expect(shouldMoveToDataFolder("document.pdf")).toBe(false);
+  });
+
+  test("should generate correct _data folder paths", () => {
+    expect(getDataFolderPath("Tasks")).toBe("Tasks/_data");
+    expect(getDataFolderPath("Odara - pages")).toBe("Odara - pages/_data");
+    expect(getDataFolderPath("Projects")).toBe("Projects/_data");
+  });
+});

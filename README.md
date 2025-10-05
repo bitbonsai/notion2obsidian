@@ -8,6 +8,7 @@
   [![GitHub Stars](https://img.shields.io/github/stars/bitbonsai/notion2obsidian?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian)
   [![Version](https://img.shields.io/badge/version-2.3.0-8250E7?style=flat&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian/releases)
   [![License](https://img.shields.io/badge/license-MIT-8250E7?style=flat&labelColor=262626)](LICENSE)
+  [![Tests](https://img.shields.io/badge/tests-62_passing-00B863?style=flat&labelColor=262626)](notion2obsidian.test.js)
 
   **[📖 View Documentation & Examples →](https://bitbonsai.github.io/notion2obsidian/)**
 
@@ -132,47 +133,51 @@ The tool can directly process Notion zip exports:
 
 ## 📊 Database & Dataview Support
 
-### CSV Database Processing
+### CSV Database Processing (Default Mode)
 
-When your Notion export includes CSV database files, the tool can process them in two modes:
+When your Notion export includes CSV database files, the tool organizes them for optimal Dataview integration:
 
-#### Traditional Mode (default)
-- Creates markdown index pages with static tables
-- Preserves original CSV files
-- Links to individual database records if they exist
+#### Default Behavior
+- **Clean CSV files**: Removes duplicate `_all.csv` files, keeps single clean copy (e.g., `Tasks.csv`)
+- **Organized structure**: Individual database pages moved to `_data/` subfolders
+- **Dataview Index files**: Index pages with queries showing ALL records
+- **Clickable CSV links**: Easy access to edit data in spreadsheet apps
 
-#### Dataview Mode (`--dataview`)
-- Creates individual markdown notes for each CSV row
-- Copies CSV files to `_databases/` folder for Dataview queries
-- Generates dynamic index pages with Dataview query blocks
-- Adds database-specific tags and frontmatter to each note
-
-### Example Dataview Output Structure
-
+Example structure:
 ```
 output/
-├── _databases/           # CSV files for Dataview queries
-│   ├── Tasks.csv
-│   └── Projects.csv
-├── Tasks/               # Individual task notes
-│   ├── add-new-task.md
-│   ├── write-proposal.md
-│   └── ...
-├── Projects/            # Individual project notes
-│   ├── website-redesign.md
-│   └── ...
-├── Tasks_Index.md       # Dataview queries for Tasks
-└── Projects_Index.md    # Dataview queries for Projects
+├── Tasks.csv                 # Clean CSV file for Dataview queries
+├── Tasks_Index.md            # Index with Dataview query
+└── Tasks/
+    └── _data/                # Individual page content (if exists)
+        ├── add-new-task.md
+        └── write-proposal.md
 ```
 
-### Dataview Queries Generated
+Index file format:
+```markdown
+# Tasks
+
+Database with 6 records.
+
+**CSV File:** [[Tasks.csv|Open in spreadsheet app]]
+
+## All Records
 
 ```dataview
-TABLE WITHOUT ID file.link as "Record", status, priority, assignee
-FROM #database/tasks
-WHERE status != "Done"
-SORT priority DESC
+TABLE WITHOUT ID Task name, Status, Assignee, Due, Priority
+FROM csv("Tasks.csv")
 ```
+
+## Individual Pages
+
+Individual database pages are stored in [[Tasks/_data|Tasks/_data/]]
+```
+
+#### Alternative: Dataview Mode (`--dataview`)
+- Creates individual markdown notes for each CSV row (not recommended for large databases)
+- Copies CSV files to `_databases/` folder
+- Generates individual notes with database tags and frontmatter
 
 ## 💬 Callout & Visual Element Support
 

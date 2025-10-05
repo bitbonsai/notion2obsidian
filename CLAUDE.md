@@ -41,6 +41,11 @@ bun run dry-run ./my-export
 - `-d, --dry-run` - Preview changes without modifying files (extracts 10% sample or 10MB max for zip files)
 - `-v, --verbose` - Show detailed processing information
 - `-h, --help` - Show help message
+- `-V, --version` - Show version number
+- `--no-callouts` - Disable Notion callout conversion to Obsidian callouts
+- `--no-csv` - Disable CSV database processing and index generation
+- `--dataview` - Create individual MD files from CSV rows (default: keep CSV only)
+- `--no-banners` - Disable cover image detection and banner frontmatter
 
 ### Testing
 
@@ -180,6 +185,10 @@ The tool uses a mix of Bun native APIs and Node.js compatibility:
 
 - **chalk** - Terminal colors and formatting
 - **fflate** - Pure JS zip extraction (handles special characters, no system dependencies)
+- **gray-matter** - YAML frontmatter parsing and generation
+- **remark** - Markdown processing for image link updates
+- **remark-frontmatter** - Frontmatter support for remark
+- **unist-util-visit** - AST traversal utility for remark processing
 
 ### Key Implementation Details
 
@@ -194,6 +203,7 @@ The tool uses a mix of Bun native APIs and Node.js compatibility:
 - **Frontmatter detection**: Handles BOM (Byte Order Mark) and whitespace variations
 - **Quote escaping**: All YAML frontmatter values are properly escaped
 - **No backups**: Files are modified directly (use git or dry-run for safety)
+- **CSV database handling**: Keeps only `_all.csv` and renames to `{DatabaseName}.csv`, moves individual database MD files to `_data` subfolder, creates Dataview-compatible Index files
 
 ### Robustness Features
 

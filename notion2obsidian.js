@@ -1,8 +1,11 @@
 #!/usr/bin/env bun
 
 import { Glob } from "bun";
-import { stat, readdir, rename, copyFile, mkdir, rm, writeFile, lstat, realpath, access, constants } from "node:fs/promises";
-import { join, dirname, basename, extname, relative, sep } from "node:path";
+import { stat, readdir, rename, copyFile, mkdir, rm, writeFile, lstat, realpath, access, constants, statSync, readdirSync, readFileSync } from "node:fs/promises";
+import { join, dirname, basename, extname, relative, sep, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { homedir } from "node:os";
+import { spawn } from "node:child_process";
 import { unzipSync } from "fflate";
 import chalk from "chalk";
 import matter from "gray-matter";
@@ -24,7 +27,7 @@ if (typeof Bun === 'undefined') {
 
 const PATTERNS = {
   hexId: /^[0-9a-fA-F]{32}$/,
-  mdLink: /\[([^\]]+)\]\(([^)]+\.md)\)/g,
+  mdLink: /\[([^\]]+)\]\(([^)]+)\)/g,
   frontmatter: /^\uFEFF?\s*---\s*\n/,  // Only accept --- delimiters (Obsidian requirement)
   notionIdExtract: /\s([0-9a-fA-F]{32})(?:\.[^.]+)?$/,
   // Visual patterns for Notion callouts and images
@@ -72,7 +75,7 @@ function parseArgs() {
     convertCallouts: true,
     processCsv: true,
     preserveBanners: true,
-    dataviewMode: true
+    dataviewMode: false  // Default to traditional mode (CSV only, no individual MD files)
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -100,8 +103,8 @@ function parseArgs() {
       config.convertCallouts = false;
     } else if (arg === '--no-csv') {
       config.processCsv = false;
-    } else if (arg === '--traditional') {
-      config.dataviewMode = false;
+    } else if (arg === '--dataview') {
+      config.dataviewMode = true;  // Enable individual MD file creation from CSV rows
     } else if (arg === '--no-banners') {
       config.preserveBanners = false;
     } else if (!arg.startsWith('-')) {
@@ -119,16 +122,17 @@ function parseArgs() {
 }
 
 function getVersion() {
-  const { readFileSync } = require('node:fs');
-  const { join } = require('node:path');
-  const { fileURLToPath } = require('node:url');
-  const { dirname } = require('node:path');
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const packagePath = join(__dirname, 'package.json');
+    const packageText = readFileSync(packagePath, 'utf-8');
+    const packageJson = JSON.parse(packageText);
 
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = dirname(__filename);
-  const packageJson = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
-
-  return packageJson.version;
+    return packageJson.version;
+  } catch (error) {
+    return '2.3.0'; // Fallback version
+  }
 }
 
 function showVersion() {
@@ -149,7 +153,7 @@ ${chalk.yellow('Options:')}
   -v, --verbose       Show detailed processing information
       --no-callouts   Disable Notion callout conversion to Obsidian callouts
       --no-csv        Disable CSV database processing and index generation
-      --traditional   Use traditional static table indexes instead of Dataview format
+      --dataview      Create individual MD files from CSV rows (default: keep CSV only)
       --no-banners    Disable cover image detection and banner frontmatter
   -V, --version       Show version number
   -h, --help          Show this help message
@@ -351,13 +355,23 @@ function convertMarkdownLinkToWiki(link, fileMap, currentFilePath) {
   // Parse path and anchor
   const [pathPart, anchor] = linkPath.split('#');
 
-  // Skip non-md files (images, etc)
-  if (!pathPart.endsWith('.md')) {
-    return link;
-  }
-
   // Decode the URL-encoded path
   const decodedPath = decodeURIComponent(pathPart);
+
+  // Handle non-md files by cleaning their names but not converting to wiki links
+  if (!pathPart.endsWith('.md')) {
+    // Clean the filename to remove Notion IDs
+    const targetFilename = basename(decodedPath);
+    const cleanedFilename = cleanName(targetFilename);
+
+    // If the filename changed, update the link
+    if (cleanedFilename !== targetFilename) {
+      const decodedLinkText = decodeURIComponent(linkText);
+      const newPath = decodedPath.replace(targetFilename, cleanedFilename);
+      return `[${decodedLinkText}](${newPath})`;
+    }
+    return link;
+  }
 
   // Resolve relative paths against current file's directory
   let targetFilename;
@@ -859,45 +873,38 @@ async function processCsvDatabases(targetDir) {
  * @returns {string} - Generated markdown content
  */
 function generateDatabaseIndex(csvInfo, targetDir) {
-  const { databaseName, header, rows } = csvInfo;
+  const { databaseName, header, rows, fileName } = csvInfo;
+  const relativeCsvPath = `${databaseName}.csv`;
 
   let markdown = `# ${databaseName}\n\n`;
   markdown += `Database with ${rows.length} records.\n\n`;
 
-  // Create markdown table
-  markdown += `| ${header.join(' | ')} |\n`;
-  markdown += `| ${header.map(() => '---').join(' | ')} |\n`;
+  // Add CSV file link
+  markdown += `**CSV File:** [[${relativeCsvPath}|Open in spreadsheet app]]\n\n`;
 
-  rows.slice(0, 10).forEach(row => { // Limit to first 10 rows for preview
-    const cells = row.map(cell => cell.replace(/"/g, '').replace(/\|/g, '\\|'));
-    markdown += `| ${cells.join(' | ')} |\n`;
-  });
+  // Create Dataview query to show all records
+  markdown += `## All Records\n\n`;
+  markdown += '```dataview\n';
+  markdown += 'TABLE WITHOUT ID ';
 
-  if (rows.length > 10) {
-    markdown += `\n*Showing first 10 of ${rows.length} records.*\n`;
-  }
+  // Use first 5 columns for the table view
+  const displayColumns = header.slice(0, 5);
+  markdown += displayColumns.join(', ') + '\n';
+  markdown += `FROM csv("${relativeCsvPath}")\n`;
+  markdown += '```\n\n';
 
-  // Look for corresponding markdown files (database pages)
-  const correspondingFiles = [];
+  // Look for corresponding directory with individual MD files
   const baseDir = dirname(csvInfo.path);
+  const dbDir = join(baseDir, databaseName);
 
   try {
-    const dirFiles = require('fs').readdirSync(baseDir);
-    dirFiles.forEach(file => {
-      if (file.endsWith('.md') && file.includes(csvInfo.fileName.split(' ')[0])) {
-        correspondingFiles.push(file);
-      }
-    });
-  } catch (error) {
-    // Directory might not exist
-  }
+    statSync(dbDir);
 
-  if (correspondingFiles.length > 0) {
-    markdown += `\n## Related Pages\n\n`;
-    correspondingFiles.forEach(file => {
-      const pageName = file.replace(/\.md$/, '').replace(/\s[0-9a-fA-F]{32}$/, '');
-      markdown += `- [[${pageName}]]\n`;
-    });
+    // Directory exists - reference the _data folder
+    markdown += `## Individual Pages\n\n`;
+    markdown += `Individual database pages are stored in [[${databaseName}/_data|${databaseName}/_data/]]\n\n`;
+  } catch (error) {
+    // No individual pages directory
   }
 
   return markdown;
@@ -1040,11 +1047,11 @@ function generateDataviewIndex(csvInfo, targetDir, createdNotes) {
 
   // Add CSV source info
   markdown += '## CSV Data Source\n\n';
-  markdown += `Raw CSV file: \`_databases/${fileName}\`\n\n`;
+  markdown += `Raw CSV file: \`_databases/${fileName}.csv\`\n\n`;
   markdown += 'You can query the CSV directly with Dataview:\n\n';
   markdown += '```dataview\n';
   markdown += `TABLE WITHOUT ID ${header.slice(0, 3).join(', ')}\n`;
-  markdown += `FROM csv("_databases/${fileName}")\n`;
+  markdown += `FROM csv("_databases/${fileName}.csv")\n`;
   markdown += '```\n\n';
 
   // Add individual note links
@@ -1388,9 +1395,8 @@ async function extractMultipleZips(zipPaths, options = {}) {
 
   if (outputDir) {
     // Use system temp directory for processing to avoid nesting in user's output
-    const os = require('os');
     const timestamp = Date.now().toString(36);
-    processingDir = join(os.tmpdir(), `notion2obsidian-${timestamp}`);
+    processingDir = join(homedir(), '.cache', `notion2obsidian-${timestamp}`);
     isUsingCustomOutput = true;
   } else {
     // No custom output - use original behavior (extract next to zip files)
@@ -1536,7 +1542,7 @@ async function extractMultipleZips(zipPaths, options = {}) {
 
 
 async function openDirectory(dirPath) {
-  const fullPath = require('node:path').resolve(dirPath);
+  const fullPath = resolve(dirPath);
 
   console.log(chalk.cyan.bold('\n🎉 Migration Complete!'));
   console.log(`Directory: ${chalk.blue(fullPath)}`);
@@ -1555,7 +1561,6 @@ async function openDirectory(dirPath) {
       openCommand = 'xdg-open';
     }
 
-    const { spawn } = require('child_process');
     spawn(openCommand, [fullPath], { detached: true, stdio: 'ignore' });
 
     console.log(chalk.green('✓ Opening directory...'));
@@ -2153,19 +2158,42 @@ async function main() {
       const newPath = join(dirname(oldPath), file.newName);
 
       // Check if target already exists
-      if (await stat(newPath).catch(() => false)) {
-        // File exists - create alternative name
+      const targetStat = await stat(newPath).catch(() => null);
+      if (targetStat) {
         const baseName = basename(file.newName, extname(file.newName));
         const extension = extname(file.newName);
         const dir = dirname(oldPath);
-        let counter = 1;
-        let alternativeName = `${baseName}-${counter}${extension}`;
-        let alternativePath = join(dir, alternativeName);
+        let alternativeName;
+        let alternativePath;
 
-        while (await stat(alternativePath).catch(() => false)) {
-          counter++;
+        if (targetStat.isDirectory()) {
+          // Directory exists with same name - add " Overview" suffix
+          alternativeName = `${baseName} Overview${extension}`;
+          alternativePath = join(dir, alternativeName);
+
+          // If "Overview" also exists, fall back to counter
+          if ((await stat(alternativePath).catch(() => null))) {
+            let counter = 1;
+            alternativeName = `${baseName}-${counter}${extension}`;
+            alternativePath = join(dir, alternativeName);
+
+            while ((await stat(alternativePath).catch(() => null))) {
+              counter++;
+              alternativeName = `${baseName}-${counter}${extension}`;
+              alternativePath = join(dir, alternativeName);
+            }
+          }
+        } else {
+          // File exists - create alternative name with counter
+          let counter = 1;
           alternativeName = `${baseName}-${counter}${extension}`;
           alternativePath = join(dir, alternativeName);
+
+          while ((await stat(alternativePath).catch(() => null))?.isFile()) {
+            counter++;
+            alternativeName = `${baseName}-${counter}${extension}`;
+            alternativePath = join(dir, alternativeName);
+          }
         }
 
         await rename(oldPath, alternativePath);
@@ -2351,6 +2379,9 @@ async function main() {
     newContent = newContent.replace(/\\(\[![\w-]+\])/g, '$1'); // Fix callout brackets
     newContent = newContent.replace(/\\(\[)/g, '$1'); // Fix any escaped opening bracket
     newContent = newContent.replace(/\\(\])/g, '$1'); // Fix any escaped closing bracket
+    newContent = newContent.replace(/\\(\()/g, '$1'); // Fix any escaped opening parenthesis
+    newContent = newContent.replace(/\\(\))/g, '$1'); // Fix any escaped closing parenthesis
+    newContent = newContent.replace(/\\(~)/g, '$1'); // Fix any escaped tildes (strikethrough)
 
     // Only write if content actually changed
     if (newContent !== content) {
@@ -2381,7 +2412,7 @@ async function main() {
       try {
         if (config.dataviewMode) {
           // Dataview mode: Copy CSV to _databases folder and create individual notes
-          const csvDestPath = join(databasesDir, csvInfo.fileName);
+          const csvDestPath = join(databasesDir, csvInfo.fileName + '.csv');
           await copyFile(csvInfo.path, csvDestPath);
 
           // Create individual notes from CSV rows
@@ -2398,12 +2429,67 @@ async function main() {
           }
         } else {
           // Traditional mode: Create static table index
+          const baseDir = dirname(csvInfo.path);
+          const dbDir = join(baseDir, csvInfo.databaseName);
+
+          // Move individual MD files to _data subfolder if database directory exists
+          try {
+            const dirStat = statSync(dbDir);
+
+            if (dirStat.isDirectory()) {
+              const dataDir = join(dbDir, '_data');
+              await mkdir(dataDir, { recursive: true });
+
+              // Move all .md files from database directory to _data
+              const files = readdirSync(dbDir);
+              for (const file of files) {
+                if (file.endsWith('.md')) {
+                  const sourcePath = join(dbDir, file);
+                  const destPath = join(dataDir, file);
+                  await rename(sourcePath, destPath);
+                }
+              }
+
+              if (config.verbose) {
+                console.log(`    ✓ Moved ${files.filter(f => f.endsWith('.md')).length} MD files to ${csvInfo.databaseName}/_data/`);
+              }
+            }
+          } catch (error) {
+            // Directory doesn't exist, skip
+          }
+
+          // Keep only _all.csv and rename to {databaseName}.csv
+          const allCsvPath = csvInfo.path.replace(/\.csv$/, '_all.csv');
+          const finalCsvPath = join(baseDir, `${csvInfo.databaseName}.csv`);
+
+          try {
+            statSync(allCsvPath);
+
+            // _all.csv exists, use it and remove the other
+            if (allCsvPath !== finalCsvPath) {
+              await copyFile(allCsvPath, finalCsvPath);
+              await rm(allCsvPath);
+
+              // Remove the non-_all version if it's different
+              if (csvInfo.path !== finalCsvPath && csvInfo.path !== allCsvPath) {
+                try {
+                  await rm(csvInfo.path);
+                } catch (e) { /* ignore */ }
+              }
+            }
+          } catch (error) {
+            // _all.csv doesn't exist, rename the current one
+            if (csvInfo.path !== finalCsvPath) {
+              await rename(csvInfo.path, finalCsvPath);
+            }
+          }
+
           const indexMarkdown = generateDatabaseIndex(csvInfo, targetDir);
-          const indexPath = join(dirname(csvInfo.path), `${csvInfo.databaseName}_Index.md`);
+          const indexPath = join(baseDir, `${csvInfo.databaseName}_Index.md`);
           await Bun.write(indexPath, indexMarkdown);
 
           if (config.verbose) {
-            console.log(`    ✓ Created index for ${csvInfo.databaseName} (${csvInfo.recordCount} records)`);
+            console.log(`    ✓ Created index for ${csvInfo.databaseName} (${csvInfo.rows.length} records)`);
           }
         }
 

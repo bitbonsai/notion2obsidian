@@ -12,8 +12,14 @@ All notable changes to the Notion to Obsidian Migration Tool.
 ## [2.3.0] - 2025-10-04 - Enhanced Database & Visual Element Support
 
 ### ✨ New Features
-- **Dataview Integration**: New `--dataview` flag creates individual notes from CSV rows with query-based indexes
-- **CSV Database Processing**: Converts Notion database exports to Obsidian-compatible formats
+- **Improved Database Handling** (DEFAULT):
+  - CSV files kept in original locations with clean names (e.g., `Odara - pages.csv`)
+  - Individual database pages moved to `_data/` subfolders for clean organization
+  - Index files with Dataview queries showing ALL records (not just 10)
+  - Clickable CSV links in Index files for easy editing
+  - Removes duplicate `_all.csv` files
+- **Dataview Integration**: Optional `--dataview` flag creates individual notes from CSV rows with query-based indexes
+- **Smart File Naming**: Files with same name as folders get " Overview" suffix instead of "-1"
 - **Notion Callout Conversion**: Transforms Notion callouts with icons to Obsidian format (18+ icon mappings)
 - **Cover Image Support**: Detects and preserves Notion cover images as banner frontmatter
 - **Multiple Zip File Support**: Process multiple zip files with glob patterns (*.zip, Export-*.zip)
@@ -22,10 +28,11 @@ All notable changes to the Notion to Obsidian Migration Tool.
 - **Enhanced File Progress Display**: Shortened long filenames in progress display (shows first part + last 5 characters)
 
 ### 🔧 Improvements
+- **Clean Code Architecture**: Consolidated imports, removed inline `require()` calls
 - **Robust Frontmatter Handling**: Replaced regex-based processing with gray-matter library for bulletproof YAML generation
 - **Enhanced Visual Element Processing**: Comprehensive icon-to-callout mapping with 18+ Notion icons
-- **Database Structure Options**: Traditional static tables vs. Dataview-compatible individual notes
-- **Flexible Feature Control**: New flags `--no-callouts`, `--no-csv`, `--no-banners` for granular control
+- **Database Structure Options**: Traditional mode (CSV + Dataview) is now default; `--dataview` creates individual MD files
+- **Flexible Feature Control**: New flags `--no-callouts`, `--no-csv`, `--dataview` for granular control
 - **Better UX**: Cleaner spacing and progress messages during extraction
 - **Automatic Cleanup**: Removes temporary extraction directories after successful migration
 
