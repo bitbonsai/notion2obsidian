@@ -9,6 +9,18 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.3.2] - 2025-10-05 - Collision Handling Improvements
+
+### 🐛 Bug Fixes
+- **Fixed file/directory collision handling**: When a file has the same name as a directory (e.g., `Atlassian.md` and `Atlassian/`), the file is now moved into the directory (`Atlassian/Atlassian.md`) instead of getting a `-1` suffix
+- **Removed Notion's collision suffixes**: Automatically strips `-\d+` suffixes from filenames when the base name matches the parent directory (e.g., `Atlassian/Atlassian-1.md` → `Atlassian/Atlassian.md`)
+
+### 🔧 Improvements
+- **Cleaner file organization**: Files with attachments are properly moved into their matching directories without unnecessary number suffixes
+- **Better handling of Notion's export naming**: Detects and removes collision numbers added by Notion during export
+
+---
+
 ## [2.3.0] - 2025-10-04 - Enhanced Database & Visual Element Support
 
 ### ✨ New Features

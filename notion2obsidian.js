@@ -1813,8 +1813,19 @@ async function main() {
   for (let i = 0; i < files.length; i++) {
     const filePath = files[i];
     const filename = basename(filePath);
-    const cleanedName = cleanName(filename);
+    let cleanedName = cleanName(filename);
     const notionId = extractNotionId(filename);
+
+    // Remove trailing -\d+ suffix if basename matches parent directory
+    // This handles Notion's collision naming (e.g., Atlassian/Atlassian-1.md -> Atlassian/Atlassian.md)
+    const parentDir = basename(dirname(filePath));
+    const cleanedParentDir = cleanDirName(parentDir);
+    const nameWithoutExt = cleanedName.replace(/\.md$/, '');
+    const trailingNumberMatch = nameWithoutExt.match(/^(.+)-(\d+)$/);
+
+    if (trailingNumberMatch && trailingNumberMatch[1] === cleanedParentDir) {
+      cleanedName = trailingNumberMatch[1] + '.md';
+    }
 
     const tags = getTagsFromPath(filePath, targetDir);
 
@@ -2170,30 +2181,33 @@ async function main() {
         const baseName = basename(file.newName, extname(file.newName));
         const extension = extname(file.newName);
         const dir = dirname(oldPath);
-        let alternativeName;
         let alternativePath;
 
         if (targetStat.isDirectory()) {
-          // Directory exists with same name - add " Overview" suffix
-          alternativeName = `${baseName} Overview${extension}`;
-          alternativePath = join(dir, alternativeName);
+          // Directory exists with same name - move file into the directory
+          alternativePath = join(newPath, file.newName);
 
-          // If "Overview" also exists, fall back to counter
-          if ((await stat(alternativePath).catch(() => null))) {
+          // If file already exists inside directory, add counter
+          if (await stat(alternativePath).catch(() => null)) {
             let counter = 1;
-            alternativeName = `${baseName}-${counter}${extension}`;
-            alternativePath = join(dir, alternativeName);
+            let altName = `${baseName}-${counter}${extension}`;
+            alternativePath = join(newPath, altName);
 
-            while ((await stat(alternativePath).catch(() => null))) {
+            while (await stat(alternativePath).catch(() => null)) {
               counter++;
-              alternativeName = `${baseName}-${counter}${extension}`;
-              alternativePath = join(dir, alternativeName);
+              altName = `${baseName}-${counter}${extension}`;
+              alternativePath = join(newPath, altName);
             }
           }
+
+          await rename(oldPath, alternativePath);
+          const relativePath = alternativePath.replace(targetDir + sep, '');
+          stats.addNamingConflict(oldPath, `Moved into directory: ${relativePath}`);
+          stats.renamedFiles++;
         } else {
           // File exists - create alternative name with counter
           let counter = 1;
-          alternativeName = `${baseName}-${counter}${extension}`;
+          let alternativeName = `${baseName}-${counter}${extension}`;
           alternativePath = join(dir, alternativeName);
 
           while ((await stat(alternativePath).catch(() => null))?.isFile()) {
@@ -2201,11 +2215,11 @@ async function main() {
             alternativeName = `${baseName}-${counter}${extension}`;
             alternativePath = join(dir, alternativeName);
           }
-        }
 
-        await rename(oldPath, alternativePath);
-        stats.addNamingConflict(oldPath, `Target exists, renamed to ${alternativeName}`);
-        stats.renamedFiles++;
+          await rename(oldPath, alternativePath);
+          stats.addNamingConflict(oldPath, `Target exists, renamed to ${alternativeName}`);
+          stats.renamedFiles++;
+        }
       } else {
         await rename(oldPath, newPath);
         stats.renamedFiles++;
