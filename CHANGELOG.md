@@ -9,6 +9,13 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.3.4] - 2025-10-05 - Version Bump
+
+### 📦 Maintenance
+- Version bump for consistency
+
+---
+
 ## [2.3.3] - 2025-10-05 - Enhanced Collision Handling
 
 ### 🐛 Bug Fixes
