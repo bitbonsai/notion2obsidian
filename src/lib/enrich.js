@@ -530,12 +530,13 @@ export async function enrichVault(vaultPath, options = {}) {
   const client = new NotionAPIClient(token);
 
   // Test API connectivity
-  console.log(chalk.cyan('🔌 Testing Notion API connection...'));
+  process.stdout.write(chalk.cyan('🔌 Testing Notion API connection...'));
   try {
     await client.getPage(pages[0].notionId);
-    console.log(chalk.green('✓ Notion API connected successfully\n'));
+    process.stdout.write(chalk.green(' ✓\n\n'));
   } catch (error) {
-    console.log(chalk.red(`✗ Failed to connect to Notion API: ${error.message}`));
+    process.stdout.write(chalk.red(' ✗\n'));
+    console.log(chalk.red(`Failed to connect to Notion API: ${error.message}`));
 
     if (error.message.includes('401') || error.message.includes('Unauthorized')) {
       console.log(chalk.gray('\nYour token may be invalid. Please check:'));
