@@ -9,10 +9,9 @@ export const PATTERNS = {
   mdLink: /\[([^\]]+)\]\(([^)]+)\)/g,
   frontmatter: /^\uFEFF?\s*---\s*\n/,  // Only accept --- delimiters (Obsidian requirement)
   notionIdExtract: /\s([0-9a-fA-F]{32})(?:\.[^.]+)?$/,
-  // Visual patterns for Notion callouts and images
+  // Visual patterns for Notion callouts
   notionCallout: /<img src="https:\/\/www\.notion\.so\/icons\/([^"]+)" alt="[^"]*" width="[^"]*"\s*\/>\s*\n\s*\n\s*\*\*([^*]+)\*\*\s*\n\s*\n\s*([\s\S]*?)(?=<aside>|<\/aside>|\n\n[#*]|\n\n<|\Z)/g,
-  notionAsideCallout: /<aside>\s*<img src="https:\/\/www\.notion\.so\/icons\/([^"]+)" alt="[^"]*" width="[^"]*"\s*\/>\s*([\s\S]*?)<\/aside>/g,
-  coverImage: /^!\[([^\]]*)\]\(([^)]+)\)$/m  // First image in file
+  notionAsideCallout: /<aside>\s*<img src="https:\/\/www\.notion\.so\/icons\/([^"]+)" alt="[^"]*" width="[^"]*"\s*\/>\s*([\s\S]*?)<\/aside>/g
 };
 
 export const BATCH_SIZE = 50;

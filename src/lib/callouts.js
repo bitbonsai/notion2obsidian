@@ -79,35 +79,3 @@ export function convertNotionCallouts(content) {
   return { content: processedContent, calloutsConverted };
 }
 
-/**
- * Detects cover images and generates banner frontmatter
- * @param {string} content - The markdown content
- * @returns {Object} - { bannerPath: string|null, content: string }
- */
-export function detectCoverImage(content) {
-  const coverMatch = content.match(PATTERNS.coverImage);
-
-  if (coverMatch) {
-    const [fullMatch, altText, imagePath] = coverMatch;
-
-    // Check if this looks like a cover/banner image
-    const isCoverCandidate =
-      content.indexOf(fullMatch) < 200 || // First 200 chars
-      imagePath.includes('cover') ||
-      imagePath.includes('banner') ||
-      imagePath.includes('hero');
-
-    if (isCoverCandidate) {
-      // Convert to wiki-link format and clean path
-      const cleanPath = imagePath.split('/').pop(); // Get just filename
-      const bannerPath = `[[${cleanPath}]]`;
-
-      // Remove the cover image from content to avoid duplication
-      const contentWithoutCover = content.replace(fullMatch, '').replace(/^\n+/, '');
-
-      return { bannerPath, content: contentWithoutCover };
-    }
-  }
-
-  return { bannerPath: null, content };
-}
