@@ -31,6 +31,7 @@
 - **🔍 Dataview Support**: Creates individual notes and query-based indexes from CSV data
 - **💬 Callout Conversion**: Transforms Notion callouts to Obsidian format with icon mapping
 - **🖼️ Cover Images**: Detects and preserves Notion cover images as banner frontmatter
+- **🔮 API Enrichment**: Fetch creation dates, public URLs, and assets from Notion API
 
 ## 📋 What It Does
 
@@ -83,6 +84,7 @@ chmod +x notion2obsidian.js
 -d, --dry-run       # Preview changes without modifying files
                     # (extracts 10% sample or 10MB max for zip files)
 -v, --verbose       # Show detailed processing information
+    --enrich        # Enrich vault with Notion API metadata (dates, URLs, assets)
     --no-callouts   # Disable Notion callout conversion to Obsidian callouts
     --no-csv        # Disable CSV database processing and index generation
     --dataview      # Generate Dataview-compatible CSV structure with individual notes
@@ -180,6 +182,117 @@ Individual database pages are stored in [[Tasks/_data|Tasks/_data/]]
 - Creates individual markdown notes for each CSV row (not recommended for large databases)
 - Copies CSV files to `_databases/` folder
 - Generates individual notes with database tags and frontmatter
+
+## 🔮 Notion API Enrichment
+
+After migrating your Notion export, you can enrich your vault with additional metadata from the Notion API. This adds information that's not included in standard exports.
+
+### What Gets Added
+
+- **📅 Creation & modification dates**: Real document timestamps (not export times)
+- **🔗 Public URLs**: Links to publicly-shared pages (if available)
+- **🎨 Icons**: Page icons (emoji or downloaded images)
+- **🖼️ Cover images**: Downloaded cover images stored next to files
+
+### Setup Instructions
+
+#### 1. Create a Notion Integration
+
+1. Visit [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations)
+2. Click "New integration"
+3. Name it (e.g., "Obsidian Enrichment")
+4. Select your workspace
+5. Copy the "Internal Integration Token"
+
+#### 2. Grant Integration Access
+
+1. Open your Notion workspace
+2. Navigate to pages you want to enrich
+3. Click "..." → "Connections" → Add your integration
+4. **Important**: Grant access to all pages you want to enrich
+
+#### 3. Set Up Authentication
+
+Create a `.env` file in your vault directory:
+
+```bash
+# In your vault directory
+echo "NOTION_TOKEN=secret_xxx" > .env
+```
+
+Or use an environment variable:
+
+```bash
+# macOS/Linux
+export NOTION_TOKEN="secret_xxx"
+
+# Windows (PowerShell)
+$env:NOTION_TOKEN="secret_xxx"
+```
+
+#### 4. Run Enrichment
+
+```bash
+# Basic enrichment
+./notion2obsidian.js --enrich /path/to/vault
+
+# With dry-run to preview
+./notion2obsidian.js --enrich /path/to/vault --dry-run
+
+# Verbose output
+./notion2obsidian.js --enrich /path/to/vault -v
+```
+
+### How It Works
+
+1. **Scans vault** for pages with `notion-id` frontmatter
+2. **Fetches metadata** from Notion API (respects 3 req/s rate limit)
+3. **Caches responses** in `.notion-cache.json` for fast re-runs
+4. **Downloads assets** (icons and covers) next to markdown files
+5. **Updates frontmatter** while preserving existing fields
+
+### Example Output
+
+**Before enrichment:**
+```yaml
+---
+title: "Design Manifesto"
+notion-id: "c27e422ef0b04e1d9e57fb3b10b498b3"
+tags: [design, principles]
+published: false
+---
+```
+
+**After enrichment:**
+```yaml
+---
+title: "Design Manifesto"
+notion-id: "c27e422ef0b04e1d9e57fb3b10b498b3"
+public-url: "https://username.notion.site/Design-Manifesto-c27e422e"
+created: 2023-04-15T10:30:00.000Z
+modified: 2024-10-02T14:22:00.000Z
+icon: "🎨"
+banner: "Design Manifesto-cover.jpg"
+tags: [design, principles]
+published: false
+---
+```
+
+### Features
+
+- **🔄 Caching**: Responses cached locally to speed up re-runs
+- **⚡ Rate limiting**: Automatic 3 req/s limit (Notion API requirement)
+- **💾 Idempotent**: Safe to run multiple times
+- **📊 Progress tracking**: Real-time progress with ETA
+- **🛡️ Error handling**: Continues on individual page errors
+- **🖼️ Asset storage**: Icons and covers saved as `PageName-icon.png`, `PageName-cover.jpg`
+
+### Important Notes
+
+- Private pages won't have `public-url` field (normal behavior)
+- Notion SVG icons are not downloaded (they're just reference URLs)
+- Cache file (`.notion-cache.json`) persists between runs
+- Assets are skipped if they already exist
 
 ## 💬 Callout & Visual Element Support
 
@@ -329,7 +442,9 @@ Open directory: my-export
 ```
 .
 ├── notion2obsidian.js            # Main migration script (executable)
-├── notion2obsidian.test.js       # Test suite
+├── notion2obsidian.test.js       # Migration test suite
+├── enrich.js                     # Notion API enrichment module
+├── enrich.test.js                # Enrichment test suite
 ├── package.json                  # Dependencies and scripts
 ├── README.md                     # This file
 └── docs/                         # Additional documentation
@@ -454,11 +569,16 @@ This is the content...
 # 3. Run the actual migration
 ./notion2obsidian.js ./Export-abc123.zip
 
-# 4. Open the extracted directory in Obsidian
+# 4. (Optional) Enrich with Notion API metadata
+#    First, set up your Notion integration token
+echo "NOTION_TOKEN=secret_xxx" > /path/to/vault/.env
+./notion2obsidian.js --enrich /path/to/vault
 
-# 5. Test your vault
+# 5. Open the extracted directory in Obsidian
 
-# 6. If satisfied, optionally remove extracted files
+# 6. Test your vault
+
+# 7. If satisfied, optionally remove extracted files
 rm -rf Export-2d6f-extracted
 ```
 

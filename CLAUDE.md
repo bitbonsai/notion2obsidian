@@ -66,6 +66,32 @@ bun install
 
 ## Architecture
 
+### Modular Structure (v2.4.0+)
+
+The tool is organized into focused modules for maintainability and AI-context-friendliness:
+
+**Core Libraries** (`src/lib/`):
+- `utils.js` (88 lines) - Shared utilities and regex patterns (PATTERNS, BATCH_SIZE)
+- `stats.js` (37 lines) - Migration statistics tracking (MigrationStats class)
+- `cli.js` (134 lines) - Command-line argument parsing and help text
+- `links.js` (99 lines) - Markdown to wiki-link conversion and file mapping
+- `callouts.js` (113 lines) - Notion callout transformation to Obsidian format
+- `frontmatter.js` (341 lines) - YAML frontmatter generation and metadata extraction
+- `scanner.js` (96 lines) - File and directory traversal with glob patterns
+- `assets.js` (66 lines) - User interaction and directory operations
+- `zip.js` (371 lines) - Archive extraction and merging with fflate
+- `csv.js` (275 lines) - Database processing and Dataview integration
+
+**Main Entry Point:**
+- `notion2obsidian.js` (1,146 lines) - Runtime check, main migration logic, CLI routing
+
+**Benefits of Modular Design:**
+- Each module < 400 lines (fits in AI context windows)
+- Clear separation of concerns
+- Easy to locate and modify functionality
+- Fully tested (94 tests passing)
+- Backward compatible
+
 ### Core Processing Pipeline
 
 The migration happens in two phases:
@@ -150,10 +176,25 @@ Tags are auto-generated from folder structure (normalized to lowercase with hyph
 
 ```
 .
-├── notion2obsidian.js            # Main migration script (executable)
-├── notion2obsidian.test.js       # Test suite (uses Bun test runner)
-├── package.json                  # Dependencies: chalk, fflate
+├── notion2obsidian.js            # Main entry point (1,146 lines)
+├── enrich.js                     # Notion API enrichment tool
+├── notion2obsidian.test.js       # Migration test suite
+├── enrich.test.js                # Enrichment test suite
+├── package.json                  # Dependencies: chalk, fflate, gray-matter, remark
 ├── README.md                     # User documentation
+├── CLAUDE.md                     # AI assistant instructions
+├── src/
+│   └── lib/                      # Modular library files
+│       ├── utils.js              # Utilities & regex patterns
+│       ├── stats.js              # Migration statistics
+│       ├── cli.js                # Argument parsing
+│       ├── links.js              # Link conversion
+│       ├── callouts.js           # Callout processing
+│       ├── frontmatter.js        # Frontmatter generation
+│       ├── scanner.js            # File traversal
+│       ├── assets.js             # User interaction
+│       ├── zip.js                # Archive extraction
+│       └── csv.js                # Database processing
 └── docs/                         # Additional documentation
     ├── ARCHITECTURE.md
     ├── EXAMPLES.md
