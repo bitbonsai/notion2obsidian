@@ -122,7 +122,7 @@ notion2obsidian
     --enrich        # Enrich vault with Notion API metadata (dates, URLs, assets)
     --no-callouts   # Disable Notion callout conversion to Obsidian callouts
     --no-csv        # Disable CSV database processing and index generation
-    --dataview      # Generate Dataview-compatible CSV structure with individual notes
+    --dataview      # Create individual markdown notes from CSV rows (default: CSV only)
 -h, --help          # Show help message
 ```
 
@@ -147,7 +147,7 @@ notion2obsidian ./my-notion-export ~/Documents/Obsidian
 # Preview changes (dry run)
 notion2obsidian *.zip ~/Vault --dry-run
 
-# Enable Dataview-compatible CSV processing
+# Create individual notes from CSV rows (optional)
 notion2obsidian ./Export-abc123.zip ~/Vault --dataview
 
 # Disable specific features
@@ -175,15 +175,19 @@ The tool can directly process Notion zip exports:
 > - Install [Obsidian Iconize plugin](https://github.com/FlorianWoelki/obsidian-iconize) to display emoji icons in file explorer and notes
 > - Covers are stored in the `_banners/` folder and referenced in frontmatter
 
-### CSV Database Processing (Default Mode)
+### CSV Database Processing
 
-When your Notion export includes CSV database files, the tool organizes them for optimal Dataview integration:
+When your Notion export includes CSV database files, the tool automatically organizes them for optimal Dataview integration.
 
-#### Default Behavior
+#### Default Mode (Recommended)
+
+By default, the tool creates Dataview-compatible indexes **without** creating individual notes from CSV rows:
+
 - **Clean CSV files**: Removes duplicate `_all.csv` files, keeps single clean copy (e.g., `Tasks.csv`)
 - **Organized structure**: Individual database pages moved to `_data/` subfolders
-- **Dataview Index files**: Index pages with queries showing ALL records
+- **Dataview Index files**: Index pages with queries showing ALL records from CSV
 - **Clickable CSV links**: Easy access to edit data in spreadsheet apps
+- **Lightweight**: Keeps your vault clean by not duplicating CSV data into notes
 
 Example structure:
 ```
@@ -216,10 +220,18 @@ FROM csv("Tasks.csv")
 Individual database pages are stored in [[Tasks/_data|Tasks/_data/]]
 ```
 
-#### Alternative: Dataview Mode (`--dataview`)
-- Creates individual markdown notes for each CSV row (not recommended for large databases)
+#### Alternative: Individual Notes Mode (`--dataview`)
+
+For those who prefer individual markdown notes for each CSV row:
+
+```bash
+notion2obsidian ./Export-abc123.zip ~/Vault --dataview
+```
+
+- Creates individual markdown notes for each CSV row
 - Copies CSV files to `_databases/` folder
-- Generates individual notes with database tags and frontmatter
+- Generates notes with database tags and frontmatter
+- **Not recommended for large databases** (can create hundreds of files)
 
 ## 🔮 Notion API Enrichment
 
