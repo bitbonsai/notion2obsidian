@@ -553,6 +553,60 @@ Your Notion export is now ready for Obsidian!
 🗑️  Cleaned up temporary extraction directory
 ```
 
+### Enrichment Output Example
+
+```
+💎 Notion 2 Obsidian v2.5.2
+
+💎 Notion API Enrichment
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔍 Scanning vault for pages with Notion IDs...
+✓ Found 2353 pages with Notion IDs
+
+🔌 Testing Notion API connection... ✓
+
+✔ Enriched 2341 pages in 114s
+
+⚠ 16 warnings:
+  • Failed to download icon for Page1.md: Download failed: 403 Forbidden
+  • Failed to download icon for Page2.md: Download failed: 403 Forbidden
+  • Failed to download icon for Page3.md: Download failed: 403 Forbidden
+  ... and 13 more
+
+Enrichment Complete!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Results:
+  ✓ 2341 pages enriched (2341 from cache, 0 fetched)
+  ✓ 182 assets downloaded (178 covers, 4 icons)
+  ✗ 12 errors encountered
+
+Metadata Added:
+  • Creation dates: 2341 pages
+  • Modification dates: 2341 pages
+  • Public URLs: 899 pages (1442 private)
+  • Page icons: 156 pages (152 emoji, 4 images)
+  • Cover images: 178 pages
+
+Cache: .notion-cache.json updated
+Banners: Stored in _banners/ folder (install Obsidian Banners plugin to display)
+Icons: Emoji icons stored in "icon" field (install Obsidian Iconize plugin to display)
+
+CSS snippet already exists: .obsidian/snippets/notion2obsidian-banners.css
+
+Time elapsed: 114s
+
+ENRICHMENT ERRORS
+
+Notion pages not found: 12 pages
+  (Pages may be deleted, in trash, or integration lacks access)
+  • Document1.md
+  • Document2.md
+  • Notes.md
+  ... and 9 more
+```
+
 ## 🏗️ Architecture & Optimizations
 
 ### Performance Improvements
