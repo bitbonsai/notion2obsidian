@@ -217,17 +217,17 @@ Create a `.env` file in your vault directory:
 
 ```bash
 # In your vault directory
-echo "NOTION_TOKEN=secret_xxx" > .env
+echo "NOTION_TOKEN=ntn_xxx" > .env
 ```
 
 Or use an environment variable:
 
 ```bash
 # macOS/Linux
-export NOTION_TOKEN="secret_xxx"
+export NOTION_TOKEN="ntn_xxx"
 
 # Windows (PowerShell)
-$env:NOTION_TOKEN="secret_xxx"
+$env:NOTION_TOKEN="ntn_xxx"
 ```
 
 #### 4. Run Enrichment
@@ -571,7 +571,7 @@ This is the content...
 
 # 4. (Optional) Enrich with Notion API metadata
 #    First, set up your Notion integration token
-echo "NOTION_TOKEN=secret_xxx" > /path/to/vault/.env
+echo "NOTION_TOKEN=ntn_xxx" > /path/to/vault/.env
 ./notion2obsidian.js --enrich /path/to/vault
 
 # 5. Open the extracted directory in Obsidian

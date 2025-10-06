@@ -521,7 +521,7 @@ My Document 2d6fa1e5/
                             <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener">notion.so/my-integrations</a></li>
                             <li>Click "New integration" and give it a name (e.g., "Obsidian Migration")</li>
                             <li>Under "Capabilities", enable "Read content"</li>
-                            <li>Copy the "Internal Integration Secret" (starts with <code>secret_</code>)</li>
+                            <li>Copy the "Internal Integration Secret" (starts with <code>ntn_</code> for new tokens)</li>
                         </ol>
                         <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 2: Connect the integration to your workspace</strong></div>
                         <ol style="margin: 0; padding-left: 1.5rem; color: var(--color-text); line-height: 1.6;">
@@ -530,7 +530,7 @@ My Document 2d6fa1e5/
                         </ol>
                         <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 3: Create a .env file in your vault directory</strong></div>
                         <pre style="color: var(--color-success);">cd ~/Documents/Obsidian/MyVault
-echo "NOTION_TOKEN=secret_xxx" > .env</pre>
+echo "NOTION_TOKEN=ntn_xxx" > .env</pre>
                         <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 4: Run enrichment</strong></div>
                         <pre style="color: var(--color-success);">notion2obsidian . --enrich</pre>
                         <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(130, 80, 231, 0.1); border-left: 3px solid #8250E7; border-radius: 0.25rem; font-size: 0.9rem;">

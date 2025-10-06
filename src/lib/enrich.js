@@ -543,9 +543,9 @@ export async function enrichVault(vaultPath, options = {}) {
     console.log(chalk.red('✗ NOTION_TOKEN not found'));
     console.log(chalk.gray('\nPlease set up your Notion integration token:'));
     console.log(chalk.gray('  1. Create .env file in vault directory:'));
-    console.log(chalk.cyan(`     echo "NOTION_TOKEN=secret_xxx" > ${join(vaultPath, '.env')}`));
+    console.log(chalk.cyan(`     echo "NOTION_TOKEN=ntn_xxx" > ${join(vaultPath, '.env')}`));
     console.log(chalk.gray('  2. Or set environment variable:'));
-    console.log(chalk.cyan('     export NOTION_TOKEN="secret_xxx"'));
+    console.log(chalk.cyan('     export NOTION_TOKEN="ntn_xxx"'));
     console.log(chalk.gray('\nFor setup instructions, visit:'));
     console.log(chalk.cyan('  https://bitbonsai.github.io/notion2obsidian/#enrich\n'));
     return { success: false };
