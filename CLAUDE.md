@@ -81,6 +81,7 @@ The tool is organized into focused modules for maintainability and AI-context-fr
 - `assets.js` (66 lines) - User interaction and directory operations
 - `zip.js` (371 lines) - Archive extraction and merging with fflate
 - `csv.js` (275 lines) - Database processing and Dataview integration
+- `enrich.js` (735 lines) - Notion API enrichment functionality (experimental)
 
 **Main Entry Point:**
 - `notion2obsidian.js` (1,146 lines) - Runtime check, main migration logic, CLI routing
@@ -177,9 +178,7 @@ Tags are auto-generated from folder structure (normalized to lowercase with hyph
 ```
 .
 ├── notion2obsidian.js            # Main entry point (1,146 lines)
-├── enrich.js                     # Notion API enrichment tool
 ├── notion2obsidian.test.js       # Migration test suite
-├── enrich.test.js                # Enrichment test suite
 ├── package.json                  # Dependencies: chalk, fflate, gray-matter, remark
 ├── README.md                     # User documentation
 ├── CLAUDE.md                     # AI assistant instructions
@@ -194,7 +193,9 @@ Tags are auto-generated from folder structure (normalized to lowercase with hyph
 │       ├── scanner.js            # File traversal
 │       ├── assets.js             # User interaction
 │       ├── zip.js                # Archive extraction
-│       └── csv.js                # Database processing
+│       ├── csv.js                # Database processing
+│       ├── enrich.js             # Notion API enrichment
+│       └── enrich.test.js        # Enrichment tests
 └── docs/                         # Additional documentation
     ├── ARCHITECTURE.md
     ├── EXAMPLES.md

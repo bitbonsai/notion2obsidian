@@ -1,5 +1,3 @@
-#!/usr/bin/env bun
-
 import { Glob } from "bun";
 import { stat, readdir, writeFile, mkdir } from "node:fs/promises";
 import { join, dirname, basename, extname, resolve } from "node:path";

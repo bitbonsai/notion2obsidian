@@ -4,6 +4,8 @@
 
 # Test files
 *.test.js
+src/**/*.test.js
+src/lib/*.test.js
 
 # GitHub specific
 .github/
