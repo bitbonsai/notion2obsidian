@@ -1,17 +1,33 @@
 {
   "name": "notion2obsidian",
   "version": "2.4.0",
-  "description": "Optimized tool to migrate Notion exports to Obsidian-compatible format",
+  "description": "High-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format",
   "type": "module",
   "bin": {
     "notion2obsidian": "notion2obsidian.js"
   },
+  "files": [
+    "notion2obsidian.js",
+    "enrich.js",
+    "src/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "migrate": "bun run notion2obsidian.js",
     "dry-run": "bun run notion2obsidian.js --dry-run",
     "help": "bun run notion2obsidian.js --help",
     "test": "bun test"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bitbonsai/notion2obsidian.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bitbonsai/notion2obsidian/issues"
+  },
+  "homepage": "https://bitbonsai.github.io/notion2obsidian/",
   "dependencies": {
     "chalk": "^5.3.0",
     "fflate": "^0.8.2",
@@ -31,8 +47,13 @@
     "obsidian",
     "migration",
     "markdown",
-    "converter"
+    "converter",
+    "cli",
+    "export",
+    "import",
+    "notes",
+    "knowledge-base"
   ],
-  "author": "",
+  "author": "bitbonsai",
   "license": "MIT"
 }

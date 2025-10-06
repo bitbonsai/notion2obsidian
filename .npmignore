@@ -1,0 +1,46 @@
+# Development documentation
+.dev-docs/
+.claude/
+
+# Test files
+*.test.js
+
+# GitHub specific
+.github/
+
+# Website files (not needed in npm package)
+index.html
+style.css
+*.svg
+*.png
+*.jpg
+*.ico
+*.webmanifest
+og-image.jpg
+logo.svg
+android-chrome-*.png
+apple-touch-icon.png
+favicon*.png
+favicon.ico
+
+# Git
+.git/
+.gitignore
+
+# Bun specific
+bun.lockb
+
+# Development files
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Test directories
+test-*/
