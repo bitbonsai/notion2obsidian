@@ -177,6 +177,8 @@ The tool can directly process Notion zip exports:
 
 ### CSV Database Processing
 
+> **💡 TL;DR**: Both modes support Dataview! The **default** creates index files that query the CSV (lightweight, recommended). The **`--dataview` flag** creates individual markdown notes from each CSV row (heavier, optional).
+
 When your Notion export includes CSV database files, the tool automatically organizes them for optimal Dataview integration.
 
 #### Default Mode (Recommended)
