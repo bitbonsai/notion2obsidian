@@ -9,6 +9,21 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.5.2] - 2025-10-06 - README & npm Package Improvements
+
+### 📝 Documentation
+- **npm-focused installation**: Updated README with `bun install -g` and `bunx` as primary installation methods
+- **Bun requirement clarity**: Added clear warning that tool requires Bun (uses Bun-specific APIs)
+- **Global command examples**: All examples now use `notion2obsidian` instead of `./notion2obsidian.js`
+- **Local development guide**: Added `bun link` instructions for developers
+- **Expanded credits**: Added all dependencies (ora, gray-matter, remark, etc.) to credits section
+- **Removed unnecessary sections**: Cleaned up configuration/pattern customization sections
+- **npm version badge**: Added npm package version badge to README
+
+### 🔧 Package Configuration
+- Ready for npm publishing with lean package size (47.5 kB compressed)
+- Proper `.npmignore` excludes test files, dev docs, and website assets
+
 ## [2.5.0] - 2025-10-06 - UX Improvements & Iconize Integration
 
 ### ✨ New Features
