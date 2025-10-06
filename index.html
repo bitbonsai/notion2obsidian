@@ -130,54 +130,58 @@
                 <div class="terminal-body">
                     <div class="terminal-line">
                         <span class="prompt">$</span>
-                        <span class="command">notion2obsidian Export-2d6fa1e5-8571-4845.zip</span>
+                        <span class="command">notion2obsidian Export-*.zip -o ~/synced/Notion</span>
                     </div>
                     <div class="terminal-line output">
-                        <span class="gem">💎</span> Notion to Obsidian
+                        <span class="gem">💎</span> Notion 2 Obsidian v2.4.0
                     </div>
                     <div class="terminal-line output blank"></div>
                     <div class="terminal-line output highlight-line">
-                        <span class="package">📦</span> Extracting zip file...
+                        <span class="package">📦</span> Extracting 1 zip files...
                     </div>
-                    <div class="terminal-line output dim">
-                        Extracting to: Export-2d6f-extracted
-                    </div>
-                    <div class="terminal-line output blank"></div>
-                    <div class="terminal-line output success highlight-line">
-                        ✓ Extracted 2088 files
+                    <div class="terminal-line output success">
+                        ✓ Extracted 2089 files
                     </div>
                     <div class="terminal-line output blank"></div>
                     <div class="terminal-line output highlight-line">
-                        Found <span class="highlight">542</span> markdown files
+                        Found <span class="highlight">1177</span> markdown files
                     </div>
                     <div class="terminal-line output">
-                        Found <span class="highlight">23</span> directories
+                        Found <span class="highlight">233</span> directories
+                    </div>
+                    <div class="terminal-line output">
+                        ⚠ <span class="highlight">112</span> duplicate filenames
                     </div>
                     <div class="terminal-line output blank"></div>
                     <div class="terminal-line output dim">
                         ═══ MIGRATION PREVIEW ═══
                     </div>
-                    <div class="terminal-line output blank"></div>
                     <div class="terminal-line output dim">
-                        ... (scroll up for details)
+                        🔗 Convert ~5650 markdown links
+                    </div>
+                    <div class="terminal-line output dim">
+                        📊 Process 109 CSV databases
                     </div>
                     <div class="terminal-line output blank"></div>
                     <div class="terminal-line output highlight-line">
                         Phase 2: Executing migration...
                     </div>
                     <div class="terminal-line output blank"></div>
-                    <div class="terminal-line output success highlight-line">
-                        ✓ Processed 542 files, converted 1247 links
+                    <div class="terminal-line output success">
+                        ✓ Processed 1177 files, converted 370 links
                     </div>
                     <div class="terminal-line output success">
-                        ✓ Renamed 542 files
+                        ✓ Converted 23 Notion callouts
                     </div>
                     <div class="terminal-line output success">
-                        ✓ Renamed 23 directories
+                        ✓ Created 58 database indexes from 109 CSV files
+                    </div>
+                    <div class="terminal-line output success">
+                        ✓ Moved 178 files into attachment folders
                     </div>
                     <div class="terminal-line output blank"></div>
                     <div class="terminal-line output success highlight-line">
-                        ✅ Migration complete! Processed 1.78 GB in 22 seconds
+                        ✅ Migration complete! Processed 1.71 GB in 1.7s
                     </div>
                 </div>
             </div>
@@ -424,12 +428,12 @@ Tasks/_data/ (individual pages)
                         <div class="step-number">4</div>
                         <div>
                             <h3>Run the migration</h3>
-                            <p>Point to your downloaded zip file or extracted folder.</p>
+                            <p>Point to your downloaded zip file with optional output directory.</p>
                         </div>
                     </div>
                     <div class="install-command">
                         <div class="code-block">
-                            <code>notion2obsidian Export-2d6fa1e5-8571-4845.zip</code>
+                            <code>notion2obsidian Export-*.zip -o ~/Documents/Obsidian</code>
                         </div>
                         <div class="code-hint">Preview first: add <code>--dry-run</code></div>
                     </div>
@@ -464,21 +468,22 @@ Tasks/_data/ (individual pages)
                 </div>
                 <div class="faq-item">
                     <h3><span class="faq-icon">?</span> What if I have duplicate filenames?</h3>
-                    <p>The tool automatically handles duplicates by adding folder context to frontmatter. For example:</p>
+                    <p>The tool handles duplicates in two ways:</p>
                     <div class="example" style="margin-top: 1rem;">
-                        <div style="margin-bottom: 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Problem:</strong> After removing Notion IDs, these become the same filename:</div>
-                        <pre style="color: #ff6b6b;">Work/Projects/README 2d6fa1e5.md  →  README.md
-Personal/Notes/README 8f3c7a19.md  →  README.md</pre>
-                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Solution:</strong> Folder context added to frontmatter:</div>
-                        <pre style="color: var(--color-success);">---
+                        <div style="margin-bottom: 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>1. Files in different folders:</strong> Folder context added to frontmatter</div>
+                        <pre style="color: var(--color-success);">Work/Projects/README.md:
+---
 folder: "Work/Projects"
 ---
-# README.md (first file)
 
+Personal/Notes/README.md:
 ---
 folder: "Personal/Notes"
----
-# README.md (second file)</pre>
+---</pre>
+                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>2. Naming conflicts:</strong> Sequential suffixes (-1, -2, etc.)</div>
+                        <pre style="color: var(--color-success);">Untitled 888cfab6.md  →  Untitled-1.md
+Untitled 85f75240.md  →  Untitled-2.md
+Untitled 985c88c5.md  →  Untitled-3.md</pre>
                     </div>
                 </div>
                 <div class="faq-item">
