@@ -1,13 +1,53 @@
 ---
 title: "CHANGELOG"
 created: 2025-10-02
-modified: 2025-10-05
+modified: 2025-10-06
 published: false
 ---
 
 # Changelog
 
 All notable changes to the Notion to Obsidian Migration Tool.
+
+## [2.4.0] - 2025-10-06 - Modular Architecture
+
+### 🏗️ Major Refactoring
+- **Modular file structure**: Split monolithic 2,725-line file into 10 focused modules (58% reduction in main file size)
+- **AI-context-friendly**: Each module < 400 lines, easy to understand and maintain
+- **Clear separation of concerns**: Dedicated modules for utilities, stats, CLI, links, callouts, frontmatter, scanner, assets, zip, and CSV processing
+
+### 📦 New Modules (`src/lib/`)
+- `utils.js` (88 lines) - Shared utilities and regex patterns
+- `stats.js` (37 lines) - Migration statistics tracking
+- `cli.js` (134 lines) - Command-line argument parsing
+- `links.js` (99 lines) - Markdown to wiki-link conversion
+- `callouts.js` (113 lines) - Notion callout transformation
+- `frontmatter.js` (341 lines) - YAML frontmatter generation
+- `scanner.js` (96 lines) - File and directory traversal
+- `assets.js` (66 lines) - User interaction
+- `zip.js` (371 lines) - Archive extraction
+- `csv.js` (275 lines) - Database processing
+
+### ✨ New Features
+- **Notion API enrichment tool** (`enrich.js`) - Experimental tool to enrich migrated vaults with additional metadata from Notion API
+
+### 🧪 Testing
+- All 94 tests passing (62 migration + 32 enrichment tests)
+- Comprehensive test coverage across all modules
+- Fully backward compatible - no breaking changes
+
+### 📚 Documentation
+- Updated CLAUDE.md with modular architecture details
+- Added REFACTORING_STATUS.md documenting the refactoring process
+- Complete file structure diagram showing all modules
+
+### 🔧 Improvements
+- Better code organization and maintainability
+- Easier to locate and modify functionality
+- Faster context loading for AI assistants
+- Foundation for future feature additions
+
+---
 
 ## [2.3.4] - 2025-10-05 - Version Bump
 
