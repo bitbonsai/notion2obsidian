@@ -8,7 +8,7 @@
   [![GitHub Stars](https://img.shields.io/github/stars/bitbonsai/notion2obsidian?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian)
   [![Version](https://img.shields.io/badge/version-2.4.0-8250E7?style=flat&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian/releases)
   [![License](https://img.shields.io/badge/license-MIT-8250E7?style=flat&labelColor=262626)](LICENSE)
-  [![Tests](https://img.shields.io/badge/tests-94_passing-00B863?style=flat&labelColor=262626)](notion2obsidian.test.js)
+  [![Tests](https://img.shields.io/badge/tests-98_passing-00B863?style=flat&labelColor=262626)](notion2obsidian.test.js)
 
   **[📖 View Documentation & Examples →](https://bitbonsai.github.io/notion2obsidian/)**
 

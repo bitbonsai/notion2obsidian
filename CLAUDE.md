@@ -196,11 +196,12 @@ Tags are auto-generated from folder structure (normalized to lowercase with hyph
 │       ├── csv.js                # Database processing
 │       ├── enrich.js             # Notion API enrichment
 │       └── enrich.test.js        # Enrichment tests
-└── docs/                         # Additional documentation
-    ├── ARCHITECTURE.md
-    ├── EXAMPLES.md
-    ├── GETTING_STARTED.md
-    └── QUICK_REFERENCE.md
+└── .dev-docs/                    # Development documentation
+    ├── ENRICHMENT_SUMMARY.md
+    ├── NEXT_STEPS.md
+    ├── NOTION_API_ENRICHMENT_PLAN.md
+    ├── REFACTORING_PLAN.md
+    └── REFACTORING_STATUS.md
 ```
 
 ## Important Implementation Notes
