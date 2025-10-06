@@ -382,7 +382,11 @@ class ProgressTracker {
   getRate() {
     const elapsed = (Date.now() - this.startTime) / 1000;
     if (elapsed === 0) return 0;
-    return (this.current / elapsed).toFixed(1);
+    // Only count fetched pages (not cached) for accurate API rate
+    if (this.fetched === 0) return 0;
+    const rate = (this.fetched / elapsed).toFixed(1);
+    // Cap at 3.0 to reflect Notion API limit
+    return Math.min(parseFloat(rate), 3.0).toFixed(1);
   }
 
   getElapsed() {
@@ -409,7 +413,7 @@ class ProgressTracker {
     const bar = chalk.cyan('━'.repeat(filled)) + chalk.gray('━'.repeat(50 - filled));
 
     const line1 = `Enriching pages: ${String(this.current).padStart(3, '0')}/${this.total} (${percentage}%) ${bar}`;
-    const line2 = `Rate: ${this.getRate()} req/s | Elapsed: ${this.getElapsed()}s | Remaining: ~${this.getRemaining()}`;
+    const line2 = `API Rate: ${this.getRate()} req/s | Elapsed: ${this.getElapsed()}s | Remaining: ~${this.getRemaining()} | Cached: ${this.fromCache}`;
 
     // Clear previous lines and rewrite (moves cursor up and clears)
     if (this.current > 1) {
