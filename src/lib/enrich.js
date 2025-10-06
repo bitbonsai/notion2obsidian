@@ -703,16 +703,23 @@ export async function enrichVault(vaultPath, options = {}) {
 
   // Show estimation for dry-run samples
   if (dryRun && isSample) {
-    const avgTimePerPage = elapsedMs / pagesToProcess.length;
-    const estimatedTotalMs = avgTimePerPage * totalPages;
-    const estimatedMinutes = Math.ceil(estimatedTotalMs / 60000);
-    const estimatedSeconds = Math.ceil(estimatedTotalMs / 1000);
+    // Only show estimate if we actually fetched pages (not all from cache)
+    if (progress.fetched > 0) {
+      const avgTimePerPage = elapsedMs / pagesToProcess.length;
+      const estimatedTotalMs = avgTimePerPage * totalPages;
+      const estimatedMinutes = Math.ceil(estimatedTotalMs / 60000);
+      const estimatedSeconds = Math.ceil(estimatedTotalMs / 1000);
 
-    console.log(chalk.gray(`\nEstimated time for full enrichment:`));
-    if (estimatedMinutes > 1) {
-      console.log(chalk.cyan(`  ~${estimatedMinutes} minutes (${totalPages} pages)`));
+      console.log(chalk.gray(`\nEstimated time for full enrichment:`));
+      if (estimatedMinutes > 1) {
+        console.log(chalk.cyan(`  ~${estimatedMinutes} minutes (${totalPages} pages)`));
+      } else {
+        console.log(chalk.cyan(`  ~${estimatedSeconds} seconds (${totalPages} pages)`));
+      }
     } else {
-      console.log(chalk.cyan(`  ~${estimatedSeconds} seconds (${totalPages} pages)`));
+      // All from cache - will be very fast
+      console.log(chalk.gray(`\nEstimated time for full enrichment:`));
+      console.log(chalk.cyan(`  Very fast - all ${totalPages} pages already cached`));
     }
   }
 
