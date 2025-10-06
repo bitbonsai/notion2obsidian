@@ -9,6 +9,24 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.4.1] - 2025-10-06 - Bug Fixes & Documentation
+
+### 🐛 Bug Fixes
+- Fixed runtime error from unused `detectCoverImage` import in frontmatter.js
+- Removed cover image detection feature (unreliable, never used)
+
+### 📝 Documentation
+- Updated website with real execution data (1177 files, 1.71 GB in 1.7s)
+- Improved FAQ terminology: "extracted folder" → "output directory"
+- Added actual duplicate handling examples with sequential suffixes (-1, -2, etc.)
+- Updated terminal demo with realistic file counts and performance metrics
+
+### 🧹 Cleanup
+- Removed `detectCoverImage()` function and `coverImage` pattern from codebase
+- Removed non-functional `--no-banners` CLI flag
+
+---
+
 ## [2.4.0] - 2025-10-06 - Modular Architecture
 
 ### 🏗️ Major Refactoring
