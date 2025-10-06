@@ -405,10 +405,18 @@ class ProgressTracker {
 
   display() {
     const percentage = Math.floor((this.current / this.total) * 100);
-    const bar = '━'.repeat(Math.floor(percentage / 2)) + '━'.repeat(50 - Math.floor(percentage / 2));
+    const filled = Math.floor(percentage / 2);
+    const bar = chalk.cyan('━'.repeat(filled)) + chalk.gray('━'.repeat(50 - filled));
 
-    console.log(`\rEnriching pages: ${String(this.current).padStart(3, '0')}/${this.total} (${percentage}%) ${chalk.cyan(bar)}`);
-    console.log(`Rate: ${this.getRate()} req/s | Elapsed: ${this.getElapsed()}s | Remaining: ~${this.getRemaining()}`);
+    const line1 = `Enriching pages: ${String(this.current).padStart(3, '0')}/${this.total} (${percentage}%) ${bar}`;
+    const line2 = `Rate: ${this.getRate()} req/s | Elapsed: ${this.getElapsed()}s | Remaining: ~${this.getRemaining()}`;
+
+    // Clear previous lines and rewrite (moves cursor up and clears)
+    if (this.current > 1) {
+      process.stdout.write('\x1b[2A'); // Move cursor up 2 lines
+    }
+    process.stdout.write('\x1b[K' + line1 + '\n'); // Clear line and write
+    process.stdout.write('\x1b[K' + line2 + '\n'); // Clear line and write
   }
 }
 
