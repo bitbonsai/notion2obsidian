@@ -259,14 +259,15 @@ export function mergeFrontmatter(existingFrontmatter, newMetadata) {
 // ============================================================================
 
 /**
- * Downloads and saves an asset next to the markdown file
+ * Downloads and saves an asset to the _banners folder
  * @param {NotionAPIClient} client - API client
  * @param {string} assetUrl - URL of the asset
+ * @param {string} vaultPath - Path to vault directory
  * @param {string} mdFilePath - Path to the markdown file
  * @param {string} assetType - Type of asset ('cover' or 'icon')
- * @returns {Promise<string|null>} Filename of saved asset, or null if failed
+ * @returns {Promise<string|null>} Relative path to saved asset (_banners/filename), or null if failed
  */
-async function downloadAsset(client, assetUrl, mdFilePath, assetType) {
+async function downloadAsset(client, assetUrl, vaultPath, mdFilePath, assetType) {
   try {
     // Skip if URL is a Notion SVG icon (these are embedded references)
     if (assetUrl.includes('notion.so/icons/')) {
@@ -283,14 +284,22 @@ async function downloadAsset(client, assetUrl, mdFilePath, assetType) {
       ext = '.jpg';
     }
 
-    // Build asset filename
+    // Build asset filename using notion-id for uniqueness
     const mdFileName = basename(mdFilePath, '.md');
     const assetFileName = `${mdFileName}-${assetType}${ext}`;
-    const assetPath = join(dirname(mdFilePath), assetFileName);
+
+    // Create _banners directory at vault root
+    const bannersDir = join(vaultPath, '_banners');
+    if (!existsSync(bannersDir)) {
+      await mkdir(bannersDir, { recursive: true });
+    }
+
+    const assetPath = join(bannersDir, assetFileName);
+    const relativePath = `_banners/${assetFileName}`;
 
     // Skip if already exists
     if (existsSync(assetPath)) {
-      return assetFileName;
+      return relativePath;
     }
 
     // Download asset
@@ -299,7 +308,7 @@ async function downloadAsset(client, assetUrl, mdFilePath, assetType) {
     // Save to file
     await writeFile(assetPath, Buffer.from(data));
 
-    return assetFileName;
+    return relativePath;
   } catch (error) {
     console.warn(chalk.yellow(`⚠ Failed to download ${assetType}: ${error.message}`));
     return null;
@@ -422,6 +431,16 @@ class ProgressTracker {
     process.stdout.write('\x1b[K' + line1 + '\n'); // Clear line and write
     process.stdout.write('\x1b[K' + line2 + '\n'); // Clear line and write
   }
+
+  clear() {
+    // Clear the progress display (2 lines)
+    if (this.current > 0) {
+      process.stdout.write('\x1b[2A'); // Move cursor up 2 lines
+      process.stdout.write('\x1b[K\n'); // Clear line 1
+      process.stdout.write('\x1b[K');   // Clear line 2
+      process.stdout.write('\x1b[1A'); // Move cursor back up to start
+    }
+  }
 }
 
 // ============================================================================
@@ -466,18 +485,52 @@ class ErrorCollector {
     }
 
     if (pageErrors.length > 0) {
-      report.push(chalk.yellow('Page Errors (skipped):'));
-      pageErrors.forEach(e => {
-        report.push(`  - ${basename(e.filePath)}: ${e.errorMessage}`);
-      });
-      report.push('');
+      // Group page errors by type
+      const notFoundErrors = pageErrors.filter(e =>
+        e.errorMessage.includes('404') ||
+        e.errorMessage.includes('Could not find page') ||
+        e.errorMessage.includes('not found')
+      );
+      const otherPageErrors = pageErrors.filter(e =>
+        !e.errorMessage.includes('404') &&
+        !e.errorMessage.includes('Could not find page') &&
+        !e.errorMessage.includes('not found')
+      );
+
+      if (notFoundErrors.length > 0) {
+        report.push(chalk.yellow(`Notion pages not found: ${notFoundErrors.length} pages`));
+        report.push(chalk.gray(`  (Pages may be deleted, in trash, or integration lacks access)`));
+        // Show first 3 examples
+        const examples = notFoundErrors.slice(0, 3);
+        examples.forEach(e => {
+          report.push(chalk.gray(`  • ${basename(e.filePath)}`));
+        });
+        if (notFoundErrors.length > 3) {
+          report.push(chalk.gray(`  ... and ${notFoundErrors.length - 3} more`));
+        }
+        report.push('');
+      }
+
+      if (otherPageErrors.length > 0) {
+        report.push(chalk.yellow(`Other page errors: ${otherPageErrors.length}`));
+        otherPageErrors.slice(0, 5).forEach(e => {
+          report.push(`  - ${basename(e.filePath)}: ${e.errorMessage}`);
+        });
+        if (otherPageErrors.length > 5) {
+          report.push(chalk.gray(`  ... and ${otherPageErrors.length - 5} more`));
+        }
+        report.push('');
+      }
     }
 
     if (assetErrors.length > 0) {
-      report.push(chalk.yellow('Asset Download Errors:'));
-      assetErrors.forEach(e => {
-        report.push(`  - ${basename(e.filePath)}: ${e.errorMessage}`);
+      report.push(chalk.yellow(`Asset download errors: ${assetErrors.length}`));
+      assetErrors.slice(0, 3).forEach(e => {
+        report.push(chalk.gray(`  • ${basename(e.filePath)}: ${e.errorMessage}`));
       });
+      if (assetErrors.length > 3) {
+        report.push(chalk.gray(`  ... and ${assetErrors.length - 3} more`));
+      }
       report.push('');
     }
 
@@ -545,7 +598,12 @@ export async function enrichVault(vaultPath, options = {}) {
     if (error.message.includes('401') || error.message.includes('Unauthorized')) {
       console.log(chalk.gray('\nYour token may be invalid. Please check:'));
       console.log(chalk.gray('  1. Token is correctly copied from https://www.notion.so/my-integrations'));
-      console.log(chalk.gray('  2. Integration has been shared with your pages'));
+      console.log(chalk.gray('  2. Integration must be internal (not public)'));
+    } else if (error.message.includes('404') || error.message.includes('Could not find page')) {
+      console.log(chalk.gray('\nPages not accessible. Grant access to your integration:'));
+      console.log(chalk.gray('  1. Go to: https://www.notion.so/profile/integrations/internal/'));
+      console.log(chalk.gray('  2. Select your integration'));
+      console.log(chalk.gray('  3. Choose pages to share (select both private and shared pages)'));
     }
 
     return { success: false };
@@ -617,21 +675,27 @@ export async function enrichVault(vaultPath, options = {}) {
       // Download assets if not dry run
       if (!dryRun) {
         if (metadata._iconUrl) {
-          const iconFile = await downloadAsset(client, metadata._iconUrl, page.path, 'icon');
+          const iconFile = await downloadAsset(client, metadata._iconUrl, vaultPath, page.path, 'icon');
           if (iconFile) {
-            metadata.icon = iconFile;
+            // Obsidian Banners plugin doesn't support image icons yet (only emoji)
+            // Save to icon-file field for future use when plugin supports it
+            metadata['icon-file'] = iconFile;
             stats.imageIcons++;
             stats.assetsDownloaded++;
           }
           delete metadata._iconUrl;
         } else if (metadata.icon) {
+          // Emoji icon - use banner_icon field for Obsidian Banners plugin
+          metadata.banner_icon = metadata.icon;
+          delete metadata.icon;
           stats.emojiIcons++;
         }
 
         if (metadata._coverUrl) {
-          const coverFile = await downloadAsset(client, metadata._coverUrl, page.path, 'cover');
+          const coverFile = await downloadAsset(client, metadata._coverUrl, vaultPath, page.path, 'cover');
           if (coverFile) {
-            metadata.banner = coverFile;
+            // Use internal link format for Obsidian Banners plugin
+            metadata.banner = `![[${coverFile}]]`;
             stats.covers++;
             stats.assetsDownloaded++;
           }
@@ -649,7 +713,10 @@ export async function enrichVault(vaultPath, options = {}) {
 
       // Update file
       if (!dryRun) {
-        const newContent = matter.stringify(page.content, mergedFrontmatter);
+        // Force quotes on all YAML strings to ensure proper parsing of banner field
+        const newContent = matter.stringify(page.content, mergedFrontmatter, {
+          forceQuotes: true
+        });
         await writeFile(page.path, newContent, 'utf-8');
       }
 
@@ -668,9 +735,9 @@ export async function enrichVault(vaultPath, options = {}) {
     }
   }
 
-  // Final progress display
+  // Final progress display, then clear it
   progress.display();
-  console.log();
+  progress.clear();
 
   // Display results
   console.log(chalk.green.bold('Enrichment Complete!'));
@@ -708,7 +775,8 @@ export async function enrichVault(vaultPath, options = {}) {
 
   console.log();
   console.log(chalk.gray(`Cache: ${CACHE_FILE} updated`));
-  console.log(chalk.gray('Assets: Stored next to markdown files'));
+  console.log(chalk.gray('Banners: Stored in _banners/ folder (install Obsidian Banners plugin to display)'));
+  console.log(chalk.gray('Icons: Emoji icons ready to display; image icons saved to icon-file field (not yet supported by plugin)'));
 
   const elapsedMs = Date.now() - startTime;
   const elapsed = Math.floor(elapsedMs / 1000);

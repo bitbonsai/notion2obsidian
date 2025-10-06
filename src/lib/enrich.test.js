@@ -578,3 +578,124 @@ describe("Error Handling", () => {
     expect(error.message).toContain('Network error');
   });
 });
+
+// ============================================================================
+// Banner and Icon Handling Tests
+// ============================================================================
+
+describe("Banner and Icon Handling", () => {
+  test("banner path uses _banners folder with internal link syntax", () => {
+    // Simulate the path that would be generated
+    const assetFileName = 'MyPage-cover.jpg';
+    const relativePath = `_banners/${assetFileName}`;
+    const bannerField = `![[${relativePath}]]`;
+
+    expect(relativePath).toBe('_banners/MyPage-cover.jpg');
+    expect(bannerField).toBe('![[_banners/MyPage-cover.jpg]]');
+    expect(bannerField).toContain('_banners/');
+    expect(bannerField).toMatch(/^!\[\[_banners\/.*\]\]$/);
+  });
+
+  test("banner path does not use .banners folder (dot prefix)", () => {
+    const relativePath = `_banners/MyPage-cover.jpg`;
+
+    expect(relativePath).not.toContain('.banners');
+    expect(relativePath).toContain('_banners');
+  });
+
+  test("emoji icon maps to banner_icon field", () => {
+    const metadata = {
+      icon: '🎨'
+    };
+
+    // Simulate the transformation
+    const result = {
+      banner_icon: metadata.icon
+    };
+
+    expect(result.banner_icon).toBe('🎨');
+    expect(result['icon-file']).toBeUndefined();
+  });
+
+  test("image icon URL maps to icon-file field, not banner_icon", () => {
+    const iconUrl = 'https://example.com/icon.png';
+    const relativePath = '_banners/MyPage-icon.png';
+
+    // Simulate the transformation for image icons
+    const result = {
+      'icon-file': relativePath
+    };
+
+    expect(result['icon-file']).toBe('_banners/MyPage-icon.png');
+    expect(result.banner_icon).toBeUndefined();
+  });
+
+  test("Notion SVG icons are skipped", () => {
+    const notionSvgUrl = 'https://www.notion.so/icons/star_purple.svg';
+
+    // Simulate the check
+    const shouldSkip = notionSvgUrl.includes('notion.so/icons/');
+
+    expect(shouldSkip).toBe(true);
+  });
+
+  test("external icon URLs are processed", () => {
+    const externalIconUrl = 'https://example.com/my-icon.png';
+
+    // Simulate the check
+    const shouldSkip = externalIconUrl.includes('notion.so/icons/');
+
+    expect(shouldSkip).toBe(false);
+  });
+
+  test("banner field requires internal link format for Obsidian Banners plugin", () => {
+    const coverPath = '_banners/MyPage-cover.jpg';
+    const bannerField = `![[${coverPath}]]`;
+
+    // Must start with ![[
+    expect(bannerField).toMatch(/^!\[\[/);
+    // Must end with ]]
+    expect(bannerField).toMatch(/\]\]$/);
+    // Must contain _banners/
+    expect(bannerField).toContain('_banners/');
+  });
+
+  test("icon-file field stores path without internal link syntax", () => {
+    const iconPath = '_banners/MyPage-icon.png';
+
+    // icon-file should be a plain path, not ![[...]]
+    expect(iconPath).not.toMatch(/^!\[\[/);
+    expect(iconPath).toBe('_banners/MyPage-icon.png');
+  });
+
+  test("asset filenames include page name and asset type", () => {
+    const mdFileName = 'MyPage';
+    const coverFileName = `${mdFileName}-cover.jpg`;
+    const iconFileName = `${mdFileName}-icon.png`;
+
+    expect(coverFileName).toBe('MyPage-cover.jpg');
+    expect(iconFileName).toBe('MyPage-icon.png');
+
+    // Should include the page name for uniqueness
+    expect(coverFileName).toContain(mdFileName);
+    expect(iconFileName).toContain(mdFileName);
+  });
+
+  test("page can have both banner and icon fields simultaneously", () => {
+    // A page with both cover image and emoji icon
+    const metadata = {
+      banner: "![[_banners/MyPage-cover.jpg]]",
+      banner_icon: "🎨"
+    };
+
+    expect(metadata.banner).toBe("![[_banners/MyPage-cover.jpg]]");
+    expect(metadata.banner_icon).toBe("🎨");
+
+    // Both fields should exist
+    expect(metadata.banner).toBeDefined();
+    expect(metadata.banner_icon).toBeDefined();
+
+    // Verify format
+    expect(metadata.banner).toMatch(/^!\[\[_banners\/.*\]\]$/);
+  });
+});

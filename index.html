@@ -133,7 +133,7 @@
                         <span class="command">notion2obsidian Export-*.zip -o ~/synced/Notion</span>
                     </div>
                     <div class="terminal-line output">
-                        <span class="gem">💎</span> Notion 2 Obsidian v2.4.3
+                        <span class="gem">💎</span> Notion 2 Obsidian v2.4.5
                     </div>
                     <div class="terminal-line output blank"></div>
                     <div class="terminal-line output highlight-line">
@@ -189,7 +189,7 @@
             <!-- Badges -->
             <div class="terminal-footer">
                 <a href="https://github.com/bitbonsai/notion2obsidian/blob/main/notion2obsidian.test.js" target="_blank" rel="noopener noreferrer" class="badge-link">
-                    <img src="https://img.shields.io/badge/tests-94_passing-00B863?style=flat&labelColor=262626" alt="Tests" loading="lazy">
+                    <img src="https://img.shields.io/badge/tests-104_passing-00B863?style=flat&labelColor=262626" alt="Tests" loading="lazy">
                 </a>
                 <a href="https://github.com/bitbonsai/notion2obsidian" target="_blank" rel="noopener noreferrer" class="badge-link">
                     <img src="https://img.shields.io/github/stars/bitbonsai/notion2obsidian?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626" alt="GitHub Stars" loading="lazy">
@@ -509,8 +509,9 @@ My Document 2d6fa1e5/
                 </div>
                 <div class="faq-item">
                     <h3><span class="faq-icon">?</span> Do I need any Obsidian plugins?</h3>
-                    <p><strong>Yes, for database features:</strong> Install the <a href="https://github.com/blacksmithgu/obsidian-dataview" target="_blank" rel="noopener">Dataview plugin</a> to view and query your Notion databases. Without it, database index pages will only show raw query code instead of interactive tables.</p>
-                    <p style="margin-top: 0.75rem; color: var(--color-text-dim); font-size: 0.9rem;">Install in Obsidian: Settings → Community plugins → Browse → "Dataview" → Install & Enable</p>
+                    <p><strong>For database features:</strong> Install the <a href="https://github.com/blacksmithgu/obsidian-dataview" target="_blank" rel="noopener">Dataview plugin</a> to view and query your Notion databases. Without it, database index pages will only show raw query code instead of interactive tables.</p>
+                    <p style="margin-top: 0.75rem;"><strong>For cover images & icons (with --enrich):</strong> Install the <a href="https://github.com/noatpad/obsidian-banners" target="_blank" rel="noopener">Obsidian Banners plugin</a> to display cover images and emoji icons enriched from Notion. Covers are downloaded to <code>_banners/</code> folder. Emoji icons work immediately; image icons are saved for future use (plugin currently only supports emoji).</p>
+                    <p style="margin-top: 0.75rem; color: var(--color-text-dim); font-size: 0.9rem;">Install in Obsidian: Settings → Community plugins → Browse → Search plugin name → Install & Enable</p>
                 </div>
                 <div class="faq-item" id="enrich">
                     <h3><span class="faq-icon">?</span> How do I enrich my vault with Notion API metadata?</h3>
@@ -523,11 +524,15 @@ My Document 2d6fa1e5/
                             <li>Under "Capabilities", enable "Read content"</li>
                             <li>Copy the "Internal Integration Secret" (starts with <code>ntn_</code> for new tokens)</li>
                         </ol>
-                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 2: Connect the integration to your workspace</strong></div>
+                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 2: Grant access to your pages</strong></div>
                         <ol style="margin: 0; padding-left: 1.5rem; color: var(--color-text); line-height: 1.6;">
-                            <li>In Notion, go to Settings & Members → Connections</li>
-                            <li>Find your integration and click "Connect"</li>
+                            <li>Go to <a href="https://www.notion.so/profile/integrations/internal/" target="_blank" rel="noopener">notion.so/profile/integrations/internal/</a></li>
+                            <li>Select your integration</li>
+                            <li>Choose pages to share (select both private and shared pages you want to enrich)</li>
                         </ol>
+                        <div style="margin-top: 0.75rem; padding: 0.5rem; background: rgba(130, 80, 231, 0.1); border-left: 3px solid #8250E7; border-radius: 0.25rem; font-size: 0.85rem;">
+                            💡 <strong>Note:</strong> Integration must be internal (not public)
+                        </div>
                         <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 3: Set environment variable</strong></div>
                         <div style="margin-bottom: 0.5rem; color: var(--color-text); font-size: 0.9rem;">Temporary (current session only):</div>
                         <pre style="color: var(--color-success);">export NOTION_TOKEN="ntn_xxx"</pre>

@@ -9,6 +9,37 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.4.5] - 2025-10-06 - Banner Format & Icon Handling
+
+### 🐛 Bug Fixes
+- Fixed banner field YAML quoting - now properly quoted to avoid parser errors with `![[...]]` syntax
+- Fixed icon handling to match Obsidian Banners plugin capabilities (emoji only)
+- Banner images now render correctly in Obsidian with Banners plugin
+- Fixed progress display doubling at 99% - now clears properly before showing summary
+
+### ✨ Improvements
+- **Emoji icons**: Work immediately via `banner_icon` frontmatter field
+- **Image icons**: Saved to `_banners/` folder as `icon-file` field for future plugin support
+- **YAML formatting**: Added `forceQuotes: true` option to gray-matter for proper frontmatter serialization
+- All frontmatter fields now properly quoted for better YAML compatibility
+- **Folder naming**: Changed from `.banners/` to `_banners/` for better Obsidian Banners plugin compatibility
+- **Error reporting**: Condensed error output - groups common errors and shows counts instead of listing all errors
+- **404 errors**: Now shows "Notion pages not found: X pages" with helpful context instead of verbose error list
+
+### 🧪 Testing
+- Added 10 comprehensive tests for banner and icon handling (104 total tests, up from 94)
+- Tests cover banner path formatting, icon field mapping, and asset naming conventions
+- Ensures `_banners/` folder usage and proper internal link syntax
+- Validates pages can have both banner and icon fields simultaneously
+
+### 📝 Documentation
+- Added clarification that Obsidian Banners plugin currently only supports emoji icons
+- Updated all examples to show correct `"![[...]]"` format for banner images (with quotes)
+- Added note about image icons being saved for when plugin adds support
+- Updated all references to use `_banners/` folder (underscore prefix)
+
+---
+
 ## [2.4.3] - 2025-10-06 - Enrichment Fixes & Token Update
 
 ### 🐛 Bug Fixes

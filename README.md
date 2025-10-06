@@ -6,9 +6,9 @@
   A high-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format. Fast, clean, and simple.
 
   [![GitHub Stars](https://img.shields.io/github/stars/bitbonsai/notion2obsidian?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian)
-  [![Version](https://img.shields.io/badge/version-2.4.3-8250E7?style=flat&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian/releases)
+  [![Version](https://img.shields.io/badge/version-2.4.5-8250E7?style=flat&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian/releases)
   [![License](https://img.shields.io/badge/license-MIT-8250E7?style=flat&labelColor=262626)](LICENSE)
-  [![Tests](https://img.shields.io/badge/tests-94_passing-00B863?style=flat&labelColor=262626)](notion2obsidian.test.js)
+  [![Tests](https://img.shields.io/badge/tests-104_passing-00B863?style=flat&labelColor=262626)](notion2obsidian.test.js)
 
   **[📖 View Documentation & Examples →](https://bitbonsai.github.io/notion2obsidian/)**
 
@@ -137,6 +137,8 @@ The tool can directly process Notion zip exports:
 
 > **📦 Required Plugin**: Install the [Dataview plugin](https://github.com/blacksmithgu/obsidian-dataview) in Obsidian to view and query database records. Without it, you'll only see the raw Dataview query code.
 
+> **🖼️ Cover Images & Icons**: If using `--enrich` to fetch Notion covers and icons, install the [Obsidian Banners plugin](https://github.com/noatpad/obsidian-banners) to display them. Covers and icons are stored in the `_banners/` folder and referenced in frontmatter.
+
 ### CSV Database Processing (Default Mode)
 
 When your Notion export includes CSV database files, the tool organizes them for optimal Dataview integration:
@@ -192,7 +194,7 @@ After migrating your Notion export, you can enrich your vault with additional me
 - **📅 Creation & modification dates**: Real document timestamps (not export times)
 - **🔗 Public URLs**: Links to publicly-shared pages (if available)
 - **🎨 Icons**: Page icons (emoji or downloaded images)
-- **🖼️ Cover images**: Downloaded cover images stored next to files
+- **🖼️ Cover images**: Downloaded cover images stored in `_banners/` folder
 
 ### Setup Instructions
 
@@ -206,10 +208,10 @@ After migrating your Notion export, you can enrich your vault with additional me
 
 #### 2. Grant Integration Access
 
-1. Open your Notion workspace
-2. Navigate to pages you want to enrich
-3. Click "..." → "Connections" → Add your integration
-4. **Important**: Grant access to all pages you want to enrich
+1. Go to https://www.notion.so/profile/integrations/internal/
+2. Select your integration
+3. Choose pages to share (select both private and shared pages you want to enrich)
+4. **Important**: Integration must be internal (not public)
 
 #### 3. Set Up Authentication
 
@@ -280,14 +282,18 @@ published: false
 title: "Design Manifesto"
 notion-id: "c27e422ef0b04e1d9e57fb3b10b498b3"
 public-url: "https://username.notion.site/Design-Manifesto-c27e422e"
-created: 2023-04-15T10:30:00.000Z
-modified: 2024-10-02T14:22:00.000Z
-icon: "🎨"
-banner: "Design Manifesto-cover.jpg"
-tags: [design, principles]
+created: "2023-04-15T10:30:00.000Z"
+modified: "2024-10-02T14:22:00.000Z"
+banner_icon: "🎨"
+banner: "![[_banners/Design Manifesto-cover.jpg]]"
+tags:
+  - "design"
+  - "principles"
 published: false
 ---
 ```
+
+**Note**: Image icons from Notion are saved to `_banners/` folder with the `icon-file` field, but are not displayed yet because the Obsidian Banners plugin currently only supports emoji icons. Emoji icons work immediately with the `banner_icon` field. All YAML fields are properly quoted for compatibility.
 
 ### Features
 
@@ -296,7 +302,7 @@ published: false
 - **💾 Idempotent**: Safe to run multiple times
 - **📊 Progress tracking**: Real-time progress with ETA
 - **🛡️ Error handling**: Continues on individual page errors
-- **🖼️ Asset storage**: Icons and covers saved as `PageName-icon.png`, `PageName-cover.jpg`
+- **🖼️ Asset storage**: Icons and covers saved to `_banners/` folder (e.g., `_banners/PageName-icon.png`, `_banners/PageName-cover.jpg`)
 
 ### Important Notes
 
@@ -321,16 +327,31 @@ Important information here
 > [!note] 📘 Important information here
 ```
 
-### Cover Images
-Detects Notion cover images and adds banner frontmatter:
+### Cover Images & Icons (with --enrich)
 
+When using `--enrich` mode with the Notion API, cover images and icons are downloaded and stored in the `_banners/` folder. Install the [Obsidian Banners plugin](https://github.com/noatpad/obsidian-banners) to display them.
+
+**Emoji icons** work immediately:
 ```yaml
 ---
 title: "My Page"
-banner: "cover-image.jpg"
+banner: "![[_banners/My Page-cover.jpg]]"
+banner_icon: "📘"
 published: false
 ---
 ```
+
+**Image icons** are downloaded but not yet displayed (plugin limitation):
+```yaml
+---
+title: "My Page"
+banner: "![[_banners/My Page-cover.jpg]]"
+icon-file: "_banners/My Page-icon.png"  # Saved for when plugin supports image icons
+published: false
+---
+```
+
+**Note**: The Obsidian Banners plugin currently only supports emoji for `banner_icon`. Image icons are listed as a future feature in their roadmap.
 
 ## 📊 Sample Output
 
