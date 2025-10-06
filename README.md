@@ -633,17 +633,26 @@ Notion pages not found: 12 pages
 
 ```
 .
-├── notion2obsidian.js            # Main migration script (executable)
+├── notion2obsidian.js            # Main entry point and migration logic
 ├── notion2obsidian.test.js       # Migration test suite
-├── enrich.js                     # Notion API enrichment module
-├── enrich.test.js                # Enrichment test suite
-├── package.json                  # Dependencies and scripts
-├── README.md                     # This file
-└── docs/                         # Additional documentation
-    ├── ARCHITECTURE.md
-    ├── EXAMPLES.md
-    ├── GETTING_STARTED.md
-    └── QUICK_REFERENCE.md
+├── package.json                  # Dependencies and metadata
+├── README.md                     # Documentation
+├── CHANGELOG.md                  # Version history
+├── LICENSE                       # MIT license
+└── src/
+    └── lib/                      # Modular library files
+        ├── assets.js             # Directory operations and user interaction
+        ├── callouts.js           # Notion callout conversion
+        ├── cli.js                # Command-line argument parsing
+        ├── csv.js                # Database processing and Dataview integration
+        ├── enrich.js             # Notion API enrichment (experimental)
+        ├── enrich.test.js        # Enrichment test suite
+        ├── frontmatter.js        # YAML frontmatter generation
+        ├── links.js              # Markdown to wiki-link conversion
+        ├── scanner.js            # File and directory traversal
+        ├── stats.js              # Migration statistics tracking
+        ├── utils.js              # Shared utilities and regex patterns
+        └── zip.js                # Archive extraction with fflate
 ```
 
 ## 🐛 Troubleshooting
