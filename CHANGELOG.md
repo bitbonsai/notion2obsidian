@@ -9,6 +9,23 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.4.3] - 2025-10-06 - Enrichment Fixes & Token Update
+
+### 🐛 Bug Fixes
+- Fixed `--enrich` flag not executing enrichment logic (was running migration instead)
+- Added proper validation for enrichment mode (requires single directory path)
+
+### 📝 Documentation
+- Updated Notion token format: `secret_` → `ntn_` (new format since Sept 2024)
+- Added comprehensive FAQ section for enrichment setup with step-by-step guide
+- Added direct link to FAQ from CLI error messages
+
+### ✨ Improvements
+- Enrichment now shows clear setup instructions when NOTION_TOKEN is missing
+- Better error messages pointing to https://bitbonsai.github.io/notion2obsidian/#enrich
+
+---
+
 ## [2.4.1] - 2025-10-06 - Bug Fixes & Documentation
 
 ### 🐛 Bug Fixes
