@@ -48,6 +48,7 @@ import {
   createNotesFromCsvRows,
   generateDataviewIndex
 } from "./src/lib/csv.js";
+import { enrichVault } from "./src/lib/enrich.js";
 
 // ============================================================================
 // Runtime Check
@@ -72,6 +73,33 @@ async function main() {
 
   // Show header
   console.log(chalk.blueBright.bold('💎 Notion 2 Obsidian') + ' ' + chalk.gray(`v${getVersion()}`) + '\n');
+
+  // Handle enrichment mode
+  if (config.enrich) {
+    // Enrichment requires a single directory path
+    if (config.targetPaths.length !== 1) {
+      console.log(chalk.red('✗ Enrichment mode requires exactly one directory path'));
+      console.log(chalk.gray('Usage: notion2obsidian <vault-directory> --enrich\n'));
+      process.exit(1);
+    }
+
+    const vaultPath = config.targetPaths[0];
+    const vaultStat = await stat(vaultPath).catch(() => null);
+
+    if (!vaultStat || !vaultStat.isDirectory()) {
+      console.log(chalk.red(`✗ Path is not a directory: ${vaultPath}`));
+      console.log(chalk.gray('Enrichment requires a directory containing migrated Notion pages\n'));
+      process.exit(1);
+    }
+
+    // Run enrichment
+    await enrichVault(vaultPath, {
+      dryRun: config.dryRun,
+      verbose: config.verbose
+    });
+
+    process.exit(0);
+  }
 
   // Resolve glob patterns and validate paths
   console.log(chalk.cyan('🔍 Resolving input paths...'));

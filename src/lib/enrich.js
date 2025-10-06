@@ -547,7 +547,7 @@ export async function enrichVault(vaultPath, options = {}) {
     console.log(chalk.gray('  2. Or set environment variable:'));
     console.log(chalk.cyan('     export NOTION_TOKEN="secret_xxx"'));
     console.log(chalk.gray('\nFor setup instructions, visit:'));
-    console.log(chalk.cyan('  https://github.com/yourusername/notion2obsidian#enrichment\n'));
+    console.log(chalk.cyan('  https://bitbonsai.github.io/notion2obsidian/#enrich\n'));
     return { success: false };
   }
 
