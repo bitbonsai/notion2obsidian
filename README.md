@@ -6,7 +6,7 @@
   A high-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format. Fast, clean, and simple.
 
   [![GitHub Stars](https://img.shields.io/github/stars/bitbonsai/notion2obsidian?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian)
-  [![Version](https://img.shields.io/badge/version-2.4.5-8250E7?style=flat&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian/releases)
+  [![npm version](https://img.shields.io/npm/v/notion2obsidian?style=flat&color=8250E7&labelColor=262626)](https://www.npmjs.com/package/notion2obsidian)
   [![License](https://img.shields.io/badge/license-MIT-8250E7?style=flat&labelColor=262626)](LICENSE)
   [![Tests](https://img.shields.io/badge/tests-104_passing-00B863?style=flat&labelColor=262626)](notion2obsidian.test.js)
 
@@ -54,12 +54,39 @@
 
 ## 🚀 Installation
 
+> **⚠️ Requires Bun:** This tool uses Bun-specific APIs and must be run with [Bun](https://bun.sh), not Node.js. Install Bun with: `curl -fsSL https://bun.sh/install | bash`
+
+### Global Installation (Recommended)
+
 ```bash
-# Install dependencies
+# Install globally with bun
+bun install -g notion2obsidian
+
+# Now use from anywhere
+notion2obsidian ./Export-abc123.zip ~/Obsidian/Vault
+```
+
+### One-Time Usage with bunx (No Install)
+
+```bash
+# Run directly without installing
+bunx notion2obsidian ./Export-abc123.zip ~/Obsidian/Vault
+```
+
+### Local Development
+
+```bash
+# Clone and install dependencies
+git clone https://github.com/bitbonsai/notion2obsidian.git
+cd notion2obsidian
 bun install
 
-# Make script executable
-chmod +x notion2obsidian.js
+# Option 1: Link globally for development
+bun link
+notion2obsidian ./Export-abc123.zip  # Now available globally
+
+# Option 2: Run directly with bun
+bun run notion2obsidian.js ./Export-abc123.zip
 ```
 
 ## 📖 Usage
@@ -68,16 +95,16 @@ chmod +x notion2obsidian.js
 
 ```bash
 # Run on a zip file with output directory (recommended)
-./notion2obsidian.js ./Export-abc123.zip ~/Obsidian/Vault
+notion2obsidian ./Export-abc123.zip ~/Obsidian/Vault
 
 # Run on a zip file (extracts in place)
-./notion2obsidian.js ./Export-abc123.zip
+notion2obsidian ./Export-abc123.zip
 
 # Run on a directory with output
-./notion2obsidian.js ./my-notion-export ~/Obsidian/Vault
+notion2obsidian ./my-notion-export ~/Obsidian/Vault
 
 # Run on current directory
-./notion2obsidian.js
+notion2obsidian
 ```
 
 ### Command Line Options
@@ -102,33 +129,32 @@ chmod +x notion2obsidian.js
 ### Examples
 
 ```bash
-# Single zip file with output directory (new syntax)
-./notion2obsidian.js ./Export-abc123.zip ~/Obsidian/Vault
+# Single zip file with output directory
+notion2obsidian ./Export-abc123.zip ~/Obsidian/Vault
 
 # Single zip file (extracts in place)
-./notion2obsidian.js ./Export-abc123.zip
+notion2obsidian ./Export-abc123.zip
 
 # Multiple zip files with output
-./notion2obsidian.js *.zip ~/Obsidian/Vault
+notion2obsidian *.zip ~/Obsidian/Vault
 
 # Using -o flag (backward compatible)
-./notion2obsidian.js Export-*.zip -o ~/Obsidian/Vault
+notion2obsidian Export-*.zip -o ~/Obsidian/Vault
 
 # Directory processing
-./notion2obsidian.js ./my-notion-export ~/Documents/Obsidian
+notion2obsidian ./my-notion-export ~/Documents/Obsidian
 
 # Preview changes (dry run)
-./notion2obsidian.js *.zip ~/Vault --dry-run
+notion2obsidian *.zip ~/Vault --dry-run
 
 # Enable Dataview-compatible CSV processing
-./notion2obsidian.js ./Export-abc123.zip ~/Vault --dataview
+notion2obsidian ./Export-abc123.zip ~/Vault --dataview
 
 # Disable specific features
-./notion2obsidian.js ./Export-abc123.zip ~/Vault --no-callouts --no-csv
+notion2obsidian ./Export-abc123.zip ~/Vault --no-callouts --no-csv
 
-# Using npm scripts
-bun run dry-run ./Export-abc123.zip
-bun run migrate ./my-export
+# Using bunx (no install required)
+bunx notion2obsidian ./Export-abc123.zip ~/Vault
 ```
 
 ## 📦 Zip File Support
@@ -257,13 +283,13 @@ source ~/.config/fish/config.fish
 
 ```bash
 # Basic enrichment
-./notion2obsidian.js --enrich /path/to/vault
+notion2obsidian --enrich /path/to/vault
 
 # With dry-run to preview
-./notion2obsidian.js --enrich /path/to/vault --dry-run
+notion2obsidian --enrich /path/to/vault --dry-run
 
 # Verbose output
-./notion2obsidian.js --enrich /path/to/vault -v
+notion2obsidian --enrich /path/to/vault -v
 ```
 
 ### How It Works
@@ -521,45 +547,11 @@ Open directory: my-export
     └── QUICK_REFERENCE.md
 ```
 
-## 🔧 Configuration
-
-### Batch Size
-
-Adjust the `BATCH_SIZE` constant in the script (default: 50):
-
-```javascript
-const BATCH_SIZE = 50; // Process 50 files concurrently
-```
-
-### Patterns
-
-Customize regex patterns at the top of the script:
-
-```javascript
-const PATTERNS = {
-  hexId: /^[0-9a-fA-F]{32}$/,
-  mdLink: /\[([^\]]+)\]\(([^)]+\.md)\)/g,
-  frontmatter: /^\uFEFF?\s*---\s*\n/,  // Handle BOM and whitespace
-  notionIdExtract: /\s([0-9a-fA-F]{32})(?:\.[^.]+)?$/
-};
-```
-
 ## 🐛 Troubleshooting
-
-### Permission Errors
-
-```bash
-# Make script executable
-chmod +x notion2obsidian.js
-```
 
 ### Memory Issues (Large Exports)
 
-If processing 10,000+ files, reduce batch size:
-
-```javascript
-const BATCH_SIZE = 25; // Reduce from 50 to 25
-```
+For very large exports (10,000+ files), the tool automatically processes files in batches of 50 for optimal performance. If you encounter memory issues, you can adjust the `BATCH_SIZE` constant in the source code.
 
 ### Link Conversion Issues
 
@@ -629,19 +621,19 @@ This is the content...
 
 ```bash
 # 1. Always start with a dry run (fast preview with sampling)
-./notion2obsidian.js ./Export-abc123.zip --dry-run
+notion2obsidian ./Export-abc123.zip --dry-run
 
 # 2. Review the preview carefully
 
 # 3. Run the actual migration
-./notion2obsidian.js ./Export-abc123.zip
+notion2obsidian ./Export-abc123.zip ~/Obsidian/Vault
 
 # 4. (Optional) Enrich with Notion API metadata
 #    First, set the NOTION_TOKEN environment variable
 export NOTION_TOKEN="ntn_xxx"
-./notion2obsidian.js --enrich /path/to/vault
+notion2obsidian --enrich ~/Obsidian/Vault
 
-# 5. Open the extracted directory in Obsidian
+# 5. Open the vault in Obsidian
 
 # 6. Test your vault
 
@@ -715,8 +707,13 @@ MIT
 
 Built with:
 - [Bun](https://bun.sh) - Fast JavaScript runtime
-- [Chalk](https://github.com/chalk/chalk) - Terminal styling
+- [chalk](https://github.com/chalk/chalk) - Terminal styling
 - [fflate](https://github.com/101arrowz/fflate) - High-performance zip extraction
+- [gray-matter](https://github.com/jonschlinkert/gray-matter) - YAML frontmatter parsing
+- [ora](https://github.com/sindresorhus/ora) - Elegant terminal spinners
+- [remark](https://github.com/remarkjs/remark) - Markdown processor
+- [remark-frontmatter](https://github.com/remarkjs/remark-frontmatter) - Frontmatter support
+- [unist-util-visit](https://github.com/syntax-tree/unist-util-visit) - AST traversal
 
 ## 🔗 Related Tools
 
@@ -726,4 +723,4 @@ Built with:
 
 ---
 
-**Made with ❤️ for the Obsidian community**
+**Made with ❤️ by [bitbonsai](https://github.com/bitbonsai) for the Obsidian community**
