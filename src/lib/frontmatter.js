@@ -2,7 +2,7 @@ import { dirname, relative, basename } from "node:path";
 import chalk from "chalk";
 import matter from "gray-matter";
 import { PATTERNS, cleanName, cleanDirName } from "./utils.js";
-import { convertNotionCallouts, detectCoverImage } from "./callouts.js";
+import { convertNotionCallouts } from "./callouts.js";
 
 // ============================================================================
 // Metadata Extraction
@@ -258,13 +258,6 @@ export async function processFileContent(filePath, metadata, fileMap, baseDir, d
   // Convert Notion callouts to Obsidian callouts
   const { content: contentAfterCallouts, calloutsConverted } = convertNotionCallouts(newContent);
   newContent = contentAfterCallouts;
-
-  // Detect and handle cover images
-  const { bannerPath, content: contentAfterBanner } = detectCoverImage(newContent);
-  if (bannerPath) {
-    metadata.banner = bannerPath;
-  }
-  newContent = contentAfterBanner;
 
   // Add frontmatter if it doesn't exist
   if (!hasFrontmatter) {
