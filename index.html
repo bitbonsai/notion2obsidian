@@ -464,7 +464,7 @@ Tasks/_data/ (individual pages)
             <div class="faq-list">
                 <div class="faq-item">
                     <h3><span class="faq-icon">?</span> Will this modify my original Notion export?</h3>
-                    <p>If you provide a .zip file, it will <strong>extract</strong> it first (your original zip stays untouched), then modify the extracted folder. You can always delete the extracted folder and re-extract from the zip to get back the original Notion export. Use <code>--dry-run</code> to preview changes before committing.</p>
+                    <p>Your original .zip file is <strong>never modified</strong>. The tool extracts it to a temporary location, moves files to the output directory (specified with <code>-o</code> or created next to the zip), then cleans up the temp folder. The migration modifies only the output directory. Use <code>--dry-run</code> to preview changes before committing.</p>
                 </div>
                 <div class="faq-item">
                     <h3><span class="faq-icon">?</span> What if I have duplicate filenames?</h3>
@@ -514,7 +514,7 @@ My Document 2d6fa1e5/
                 </div>
                 <div class="faq-item">
                     <h3><span class="faq-icon">?</span> Can I undo the migration?</h3>
-                    <p>Your original .zip file is never modified and always preserved. Simply delete the extracted folder and re-extract from the zip to get back the original Notion export. For extra safety, keep a backup of the zip file.</p>
+                    <p>Yes. Your original .zip file is never touched. Simply delete the output directory and run the migration again to start fresh. The tool automatically cleans up temporary files, so you only need to manage the output directory.</p>
                 </div>
             </div>
         </section>
