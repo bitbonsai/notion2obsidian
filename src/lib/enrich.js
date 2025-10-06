@@ -538,11 +538,31 @@ export async function enrichVault(vaultPath, options = {}) {
     return { success: false };
   }
 
+  // In dry-run mode, sample a subset of pages
+  let pagesToProcess = pages;
+  const totalPages = pages.length;
+  let isSample = false;
+
+  if (dryRun) {
+    // Process 10 pages or 1% of total, whichever is larger
+    const sampleSize = Math.max(10, Math.ceil(totalPages * 0.01));
+    if (totalPages > sampleSize) {
+      pagesToProcess = pages.slice(0, sampleSize);
+      isSample = true;
+    }
+    console.log(chalk.yellow.bold('DRY RUN MODE - No changes will be made'));
+    if (isSample) {
+      console.log(chalk.gray(`Processing ${pagesToProcess.length} sample pages (out of ${totalPages} total)\n`));
+    } else {
+      console.log(chalk.gray(`Processing all ${totalPages} pages\n`));
+    }
+  }
+
   // Initialize cache
   const cache = new CacheManager(vaultPath);
 
   // Initialize progress tracker
-  const progress = new ProgressTracker(pages.length);
+  const progress = new ProgressTracker(pagesToProcess.length);
 
   // Initialize error collector
   const errors = new ErrorCollector();
@@ -558,12 +578,11 @@ export async function enrichVault(vaultPath, options = {}) {
     imageIcons: 0
   };
 
-  if (dryRun) {
-    console.log(chalk.yellow.bold('DRY RUN MODE - No changes will be made\n'));
-  }
+  // Track timing for dry-run estimation
+  const startTime = Date.now();
 
   // Process each page
-  for (const page of pages) {
+  for (const page of pagesToProcess) {
     try {
       let pageData;
 
@@ -664,7 +683,7 @@ export async function enrichVault(vaultPath, options = {}) {
   console.log(chalk.white('Metadata Added:'));
   console.log(`  • Creation dates: ${stats.pagesEnriched} pages`);
   console.log(`  • Modification dates: ${stats.pagesEnriched} pages`);
-  console.log(`  • Public URLs: ${stats.publicUrls} pages (${pages.length - stats.publicUrls} private)`);
+  console.log(`  • Public URLs: ${stats.publicUrls} pages (${stats.pagesEnriched - stats.publicUrls} private)`);
 
   if (stats.emojiIcons + stats.imageIcons > 0) {
     console.log(`  • Page icons: ${stats.emojiIcons + stats.imageIcons} pages (${stats.emojiIcons} emoji, ${stats.imageIcons} images)`);
@@ -678,8 +697,24 @@ export async function enrichVault(vaultPath, options = {}) {
   console.log(chalk.gray(`Cache: ${CACHE_FILE} updated`));
   console.log(chalk.gray('Assets: Stored next to markdown files'));
 
-  const elapsed = Math.floor((Date.now() - progress.startTime) / 1000);
+  const elapsedMs = Date.now() - startTime;
+  const elapsed = Math.floor(elapsedMs / 1000);
   console.log(chalk.gray(`\nTime elapsed: ${elapsed}s`));
+
+  // Show estimation for dry-run samples
+  if (dryRun && isSample) {
+    const avgTimePerPage = elapsedMs / pagesToProcess.length;
+    const estimatedTotalMs = avgTimePerPage * totalPages;
+    const estimatedMinutes = Math.ceil(estimatedTotalMs / 60000);
+    const estimatedSeconds = Math.ceil(estimatedTotalMs / 1000);
+
+    console.log(chalk.gray(`\nEstimated time for full enrichment:`));
+    if (estimatedMinutes > 1) {
+      console.log(chalk.cyan(`  ~${estimatedMinutes} minutes (${totalPages} pages)`));
+    } else {
+      console.log(chalk.cyan(`  ~${estimatedSeconds} seconds (${totalPages} pages)`));
+    }
+  }
 
   // Show error report if any
   if (errors.hasErrors()) {
