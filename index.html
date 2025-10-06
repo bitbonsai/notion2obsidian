@@ -189,7 +189,7 @@
             <!-- Badges -->
             <div class="terminal-footer">
                 <a href="https://github.com/bitbonsai/notion2obsidian/blob/main/notion2obsidian.test.js" target="_blank" rel="noopener noreferrer" class="badge-link">
-                    <img src="https://img.shields.io/badge/tests-98_passing-00B863?style=flat&labelColor=262626" alt="Tests" loading="lazy">
+                    <img src="https://img.shields.io/badge/tests-94_passing-00B863?style=flat&labelColor=262626" alt="Tests" loading="lazy">
                 </a>
                 <a href="https://github.com/bitbonsai/notion2obsidian" target="_blank" rel="noopener noreferrer" class="badge-link">
                     <img src="https://img.shields.io/github/stars/bitbonsai/notion2obsidian?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626" alt="GitHub Stars" loading="lazy">
@@ -528,14 +528,20 @@ My Document 2d6fa1e5/
                             <li>In Notion, go to Settings & Members → Connections</li>
                             <li>Find your integration and click "Connect"</li>
                         </ol>
-                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 3: Create a .env file in your vault directory</strong></div>
-                        <pre style="color: var(--color-success);">cd ~/Documents/Obsidian/MyVault
-echo "NOTION_TOKEN=ntn_xxx" > .env</pre>
+                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 3: Set environment variable</strong></div>
+                        <div style="margin-bottom: 0.5rem; color: var(--color-text); font-size: 0.9rem;">Temporary (current session only):</div>
+                        <pre style="color: var(--color-success);">export NOTION_TOKEN="ntn_xxx"</pre>
+                        <div style="margin: 1rem 0 0.5rem; color: var(--color-text); font-size: 0.9rem;">Permanent (add to shell config):</div>
+                        <pre style="color: var(--color-success);"># For bash
+echo 'export NOTION_TOKEN="ntn_xxx"' >> ~/.bashrc
+source ~/.bashrc
+
+# For zsh
+echo 'export NOTION_TOKEN="ntn_xxx"' >> ~/.zshrc
+source ~/.zshrc</pre>
                         <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 4: Run enrichment</strong></div>
-                        <pre style="color: var(--color-success);">notion2obsidian . --enrich</pre>
-                        <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(130, 80, 231, 0.1); border-left: 3px solid #8250E7; border-radius: 0.25rem; font-size: 0.9rem;">
-                            💡 <strong>Tip:</strong> Add <code>.env</code> to your <code>.gitignore</code> to keep your token private
-                        </div>
+                        <pre style="color: var(--color-success);">cd ~/Documents/Obsidian/MyVault
+notion2obsidian . --enrich</pre>
                     </div>
                 </div>
                 <div class="faq-item">

@@ -8,7 +8,7 @@
   [![GitHub Stars](https://img.shields.io/github/stars/bitbonsai/notion2obsidian?style=flat&logo=github&logoColor=white&color=8250E7&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian)
   [![Version](https://img.shields.io/badge/version-2.4.3-8250E7?style=flat&labelColor=262626)](https://github.com/bitbonsai/notion2obsidian/releases)
   [![License](https://img.shields.io/badge/license-MIT-8250E7?style=flat&labelColor=262626)](LICENSE)
-  [![Tests](https://img.shields.io/badge/tests-98_passing-00B863?style=flat&labelColor=262626)](notion2obsidian.test.js)
+  [![Tests](https://img.shields.io/badge/tests-94_passing-00B863?style=flat&labelColor=262626)](notion2obsidian.test.js)
 
   **[📖 View Documentation & Examples →](https://bitbonsai.github.io/notion2obsidian/)**
 
@@ -213,14 +213,9 @@ After migrating your Notion export, you can enrich your vault with additional me
 
 #### 3. Set Up Authentication
 
-Create a `.env` file in your vault directory:
+Set the `NOTION_TOKEN` environment variable with your integration token.
 
-```bash
-# In your vault directory
-echo "NOTION_TOKEN=ntn_xxx" > .env
-```
-
-Or use an environment variable:
+**Temporary (current session only):**
 
 ```bash
 # macOS/Linux
@@ -228,6 +223,22 @@ export NOTION_TOKEN="ntn_xxx"
 
 # Windows (PowerShell)
 $env:NOTION_TOKEN="ntn_xxx"
+```
+
+**Permanent (recommended):**
+
+```bash
+# For bash - add to ~/.bashrc
+echo 'export NOTION_TOKEN="ntn_xxx"' >> ~/.bashrc
+source ~/.bashrc
+
+# For zsh - add to ~/.zshrc
+echo 'export NOTION_TOKEN="ntn_xxx"' >> ~/.zshrc
+source ~/.zshrc
+
+# For fish - add to ~/.config/fish/config.fish
+echo 'set -x NOTION_TOKEN "ntn_xxx"' >> ~/.config/fish/config.fish
+source ~/.config/fish/config.fish
 ```
 
 #### 4. Run Enrichment
@@ -570,8 +581,8 @@ This is the content...
 ./notion2obsidian.js ./Export-abc123.zip
 
 # 4. (Optional) Enrich with Notion API metadata
-#    First, set up your Notion integration token
-echo "NOTION_TOKEN=ntn_xxx" > /path/to/vault/.env
+#    First, set the NOTION_TOKEN environment variable
+export NOTION_TOKEN="ntn_xxx"
 ./notion2obsidian.js --enrich /path/to/vault
 
 # 5. Open the extracted directory in Obsidian

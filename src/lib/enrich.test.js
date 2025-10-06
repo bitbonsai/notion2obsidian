@@ -42,82 +42,44 @@ async function createTestFile(vaultPath, filename, frontmatter, content = '') {
 }
 
 // ============================================================================
-// .env File Loading Tests
+// Environment Token Tests
 // ============================================================================
 
 describe("getNotionToken", () => {
-  let testVault;
-
-  beforeEach(async () => {
-    testVault = await createTestVault();
-    // Clear environment variable
+  beforeEach(() => {
+    // Clear environment variable before each test
     delete process.env.NOTION_TOKEN;
   });
 
-  afterEach(async () => {
-    await cleanupTestVault(testVault);
+  afterEach(() => {
+    // Clean up
     delete process.env.NOTION_TOKEN;
   });
 
-  test("returns token from .env file in vault directory", async () => {
-    const envPath = join(testVault, '.env');
-    await writeFile(envPath, 'NOTION_TOKEN=secret_from_file', 'utf-8');
+  test("returns token from environment variable", () => {
+    process.env.NOTION_TOKEN = 'ntn_test_token_123';
 
-    const token = getNotionToken(testVault);
-    expect(token).toBe('secret_from_file');
-  });
-
-  test("returns token from environment variable if .env doesn't exist", () => {
-    process.env.NOTION_TOKEN = 'secret_from_env';
-
-    const token = getNotionToken(testVault);
-    expect(token).toBe('secret_from_env');
-  });
-
-  test("prioritizes .env file over environment variable", async () => {
-    const envPath = join(testVault, '.env');
-    await writeFile(envPath, 'NOTION_TOKEN=secret_from_file', 'utf-8');
-    process.env.NOTION_TOKEN = 'secret_from_env';
-
-    const token = getNotionToken(testVault);
-    expect(token).toBe('secret_from_file');
+    const token = getNotionToken();
+    expect(token).toBe('ntn_test_token_123');
   });
 
   test("returns null if no token found", () => {
-    const token = getNotionToken(testVault);
+    const token = getNotionToken();
     expect(token).toBeNull();
   });
 
-  test("handles .env with quotes", async () => {
-    const envPath = join(testVault, '.env');
-    await writeFile(envPath, 'NOTION_TOKEN="secret_with_quotes"', 'utf-8');
+  test("handles secret_ prefix (legacy tokens)", () => {
+    process.env.NOTION_TOKEN = 'secret_legacy_token_456';
 
-    const token = getNotionToken(testVault);
-    expect(token).toBe('secret_with_quotes');
+    const token = getNotionToken();
+    expect(token).toBe('secret_legacy_token_456');
   });
 
-  test("handles .env with single quotes", async () => {
-    const envPath = join(testVault, '.env');
-    await writeFile(envPath, "NOTION_TOKEN='secret_with_single_quotes'", 'utf-8');
+  test("handles ntn_ prefix (current tokens)", () => {
+    process.env.NOTION_TOKEN = 'ntn_current_token_789';
 
-    const token = getNotionToken(testVault);
-    expect(token).toBe('secret_with_single_quotes');
-  });
-
-  test("ignores comments in .env file", async () => {
-    const envPath = join(testVault, '.env');
-    await writeFile(envPath, '# Comment\nNOTION_TOKEN=secret_token\n# Another comment', 'utf-8');
-
-    const token = getNotionToken(testVault);
-    expect(token).toBe('secret_token');
-  });
-
-  test("ignores empty lines in .env file", async () => {
-    const envPath = join(testVault, '.env');
-    await writeFile(envPath, '\n\nNOTION_TOKEN=secret_token\n\n', 'utf-8');
-
-    const token = getNotionToken(testVault);
-    expect(token).toBe('secret_token');
+    const token = getNotionToken();
+    expect(token).toBe('ntn_current_token_789');
   });
 });
 

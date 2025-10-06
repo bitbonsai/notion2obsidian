@@ -16,62 +16,14 @@ const MAX_RETRIES = 3;
 const CACHE_FILE = ".notion-cache.json";
 
 // ============================================================================
-// .env File Loading
+// Environment Token
 // ============================================================================
 
 /**
- * Loads environment variables from a .env file
- * @param {string} envPath - Path to .env file
- * @returns {Object} Environment variables as key-value pairs
- */
-function loadEnvFile(envPath) {
-  try {
-    const content = readFileSync(envPath, 'utf-8');
-    const env = {};
-
-    content.split('\n').forEach(line => {
-      // Skip comments and empty lines
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) return;
-
-      // Parse key=value
-      const match = trimmed.match(/^([^=]+)=(.*)$/);
-      if (match) {
-        const key = match[1].trim();
-        let value = match[2].trim();
-
-        // Remove quotes if present
-        if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-
-        env[key] = value;
-      }
-    });
-
-    return env;
-  } catch (error) {
-    return {};
-  }
-}
-
-/**
- * Gets the Notion API token from .env file or environment variable
- * @param {string} vaultPath - Path to the vault directory
+ * Gets the Notion API token from environment variable
  * @returns {string|null} The API token or null if not found
  */
-export function getNotionToken(vaultPath) {
-  // First, try .env file in vault directory
-  const envPath = join(vaultPath, '.env');
-  if (existsSync(envPath)) {
-    const env = loadEnvFile(envPath);
-    if (env.NOTION_TOKEN) {
-      return env.NOTION_TOKEN;
-    }
-  }
-
-  // Fall back to environment variable
+export function getNotionToken() {
   return process.env.NOTION_TOKEN || null;
 }
 
@@ -538,14 +490,17 @@ export async function enrichVault(vaultPath, options = {}) {
   console.log(chalk.gray('━'.repeat(50)) + '\n');
 
   // Get Notion token
-  const token = getNotionToken(vaultPath);
+  const token = getNotionToken();
   if (!token) {
     console.log(chalk.red('✗ NOTION_TOKEN not found'));
-    console.log(chalk.gray('\nPlease set up your Notion integration token:'));
-    console.log(chalk.gray('  1. Create .env file in vault directory:'));
-    console.log(chalk.cyan(`     echo "NOTION_TOKEN=ntn_xxx" > ${join(vaultPath, '.env')}`));
-    console.log(chalk.gray('  2. Or set environment variable:'));
-    console.log(chalk.cyan('     export NOTION_TOKEN="ntn_xxx"'));
+    console.log(chalk.gray('\nPlease set the NOTION_TOKEN environment variable:'));
+    console.log(chalk.gray('\n  Temporary (current session):'));
+    console.log(chalk.cyan('    export NOTION_TOKEN="ntn_xxx"'));
+    console.log(chalk.gray('\n  Permanent (add to shell config):'));
+    console.log(chalk.cyan('    # For bash - add to ~/.bashrc'));
+    console.log(chalk.cyan('    echo \'export NOTION_TOKEN="ntn_xxx"\' >> ~/.bashrc'));
+    console.log(chalk.cyan('\n    # For zsh - add to ~/.zshrc'));
+    console.log(chalk.cyan('    echo \'export NOTION_TOKEN="ntn_xxx"\' >> ~/.zshrc'));
     console.log(chalk.gray('\nFor setup instructions, visit:'));
     console.log(chalk.cyan('  https://bitbonsai.github.io/notion2obsidian/#enrich\n'));
     return { success: false };
