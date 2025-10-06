@@ -166,16 +166,9 @@ The tool can directly process Notion zip exports:
 - **Single directory detection**: Automatically uses subdirectory if zip contains only one folder
 - **Cleanup guidance**: Shows extracted location and removal command after completion
 
-## 📊 Database & Dataview Support
+## 📊 CSV Database & Dataview Support
 
 > **📦 Required Plugin**: Install the [Dataview plugin](https://github.com/blacksmithgu/obsidian-dataview) in Obsidian to view and query database records. Without it, you'll only see the raw Dataview query code.
-
-> **🖼️ Cover Images & Icons**: If using `--enrich` to fetch Notion covers and icons:
-> - Install [Obsidian Banners plugin](https://github.com/noatpad/obsidian-banners) to display cover images
-> - Install [Obsidian Iconize plugin](https://github.com/FlorianWoelki/obsidian-iconize) to display emoji icons in file explorer and notes
-> - Covers are stored in the `_banners/` folder and referenced in frontmatter
-
-### CSV Database Processing
 
 > **💡 TL;DR**: Both modes support Dataview! The **default** creates index files that query the CSV (lightweight, recommended). The **`--dataview` flag** creates individual markdown notes from each CSV row (heavier, optional).
 
@@ -363,29 +356,14 @@ published: false
 - Assets are skipped if they already exist
 - Emoji icons work best with Iconize plugin (enable "Use frontmatter" in plugin settings)
 
-## 💬 Callout & Visual Element Support
+## 🖼️ Cover Images & Icons (Obsidian Plugins)
 
-### Notion Callouts
-Converts Notion callouts with icons to Obsidian format:
+When using `--enrich` mode, the tool fetches cover images and emoji icons from the Notion API. To display them in Obsidian, you'll need these plugins:
 
-```markdown
-<!-- Notion format -->
-<aside>
-<img src="https://www.notion.so/icons/token_blue.svg" width="40px" />
-Important information here
-</aside>
+- **[Obsidian Banners](https://github.com/noatpad/obsidian-banners)** - Displays cover images at the top of notes
+- **[Obsidian Iconize](https://github.com/FlorianWoelki/obsidian-iconize)** - Displays emoji icons in file explorer and note titles
 
-<!-- Becomes Obsidian format -->
-> [!note] 📘 Important information here
-```
-
-### Cover Images & Icons (with --enrich)
-
-When using `--enrich` mode with the Notion API, cover images and emoji icons are fetched from Notion:
-
-**Required Plugins:**
-- [Obsidian Banners](https://github.com/noatpad/obsidian-banners) - Displays cover images
-- [Obsidian Iconize](https://github.com/FlorianWoelki/obsidian-iconize) - Displays emoji icons in file explorer and note titles
+### How It Works
 
 **Emoji icons** (displayed by Iconize):
 ```yaml
@@ -408,15 +386,21 @@ published: false
 ---
 ```
 
-**Setup Iconize:**
+### Plugin Setup
+
+**Iconize:**
 1. Install Iconize plugin from Community Plugins
 2. Enable it in Settings → Community Plugins
 3. In Iconize settings, enable "Use frontmatter" option
 4. Icons will automatically appear in file explorer and note titles
 
+**Banners:**
+1. Install Banners plugin from Community Plugins
+2. Enable the CSS snippet created by enrichment (see below)
+
 ### CSS Snippet for Banner Display
 
-Enrichment automatically creates a CSS snippet (`.obsidian/snippets/notion2obsidian-banners.css`) that:
+The enrichment process automatically creates a CSS snippet (`.obsidian/snippets/notion2obsidian-banners.css`) that:
 - Hides the properties header behind banners for a cleaner look
 - Hides the inline title in the document body
 - Hides metadata in Reading View while keeping it visible in Edit mode
@@ -427,6 +411,25 @@ Enrichment automatically creates a CSS snippet (`.obsidian/snippets/notion2obsid
 3. Enable `notion2obsidian-banners`
 
 The snippet is only created once and won't overwrite existing customizations.
+
+## 💬 Notion Callout Conversion
+
+The tool automatically converts Notion callouts with icons to Obsidian callout format:
+
+**Before (Notion export):**
+```markdown
+<aside>
+<img src="https://www.notion.so/icons/token_blue.svg" width="40px" />
+Important information here
+</aside>
+```
+
+**After (Obsidian format):**
+```markdown
+> [!note] 📘 Important information here
+```
+
+Callout conversion is enabled by default. To disable, use `--no-callouts` flag.
 
 ## 📊 Sample Output
 
