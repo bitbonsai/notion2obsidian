@@ -4,6 +4,7 @@ import { join, dirname, basename, extname, resolve } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import chalk from "chalk";
 import matter from "gray-matter";
+import ora from "ora";
 
 // ============================================================================
 // Configuration & Constants
@@ -265,9 +266,10 @@ export function mergeFrontmatter(existingFrontmatter, newMetadata) {
  * @param {string} vaultPath - Path to vault directory
  * @param {string} mdFilePath - Path to the markdown file
  * @param {string} assetType - Type of asset ('cover' or 'icon')
+ * @param {Array} warnings - Array to collect warning messages
  * @returns {Promise<string|null>} Relative path to saved asset (_banners/filename), or null if failed
  */
-async function downloadAsset(client, assetUrl, vaultPath, mdFilePath, assetType) {
+async function downloadAsset(client, assetUrl, vaultPath, mdFilePath, assetType, warnings = []) {
   try {
     // Skip if URL is a Notion SVG icon (these are embedded references)
     if (assetUrl.includes('notion.so/icons/')) {
@@ -310,7 +312,8 @@ async function downloadAsset(client, assetUrl, vaultPath, mdFilePath, assetType)
 
     return relativePath;
   } catch (error) {
-    console.warn(chalk.yellow(`⚠ Failed to download ${assetType}: ${error.message}`));
+    // Collect warning instead of printing immediately (to avoid interrupting spinner)
+    warnings.push(`Failed to download ${assetType} for ${basename(mdFilePath)}: ${error.message}`);
     return null;
   }
 }
@@ -377,6 +380,11 @@ class ProgressTracker {
     this.startTime = Date.now();
     this.fromCache = 0;
     this.fetched = 0;
+    this.lastDisplayTime = 0;
+    this.spinner = ora({
+      text: 'Starting enrichment...',
+      color: 'cyan'
+    }).start();
   }
 
   increment(fromCache = false) {
@@ -391,10 +399,8 @@ class ProgressTracker {
   getRate() {
     const elapsed = (Date.now() - this.startTime) / 1000;
     if (elapsed === 0) return 0;
-    // Only count fetched pages (not cached) for accurate API rate
     if (this.fetched === 0) return 0;
     const rate = (this.fetched / elapsed).toFixed(1);
-    // Cap at 3.0 to reflect Notion API limit
     return Math.min(parseFloat(rate), 3.0).toFixed(1);
   }
 
@@ -416,30 +422,36 @@ class ProgressTracker {
     }
   }
 
-  display() {
-    const percentage = Math.floor((this.current / this.total) * 100);
-    const filled = Math.floor(percentage / 2);
-    const bar = chalk.cyan('━'.repeat(filled)) + chalk.gray('━'.repeat(50 - filled));
+  display(force = false) {
+    const now = Date.now();
+    const timeSinceLastDisplay = now - this.lastDisplayTime;
 
-    const line1 = `Enriching pages: ${String(this.current).padStart(3, '0')}/${this.total} (${percentage}%) ${bar}`;
-    const line2 = `API Rate: ${this.getRate()} req/s | Elapsed: ${this.getElapsed()}s | Remaining: ~${this.getRemaining()} | Cached: ${this.fromCache}`;
-
-    // Clear previous lines and rewrite (moves cursor up and clears)
-    if (this.current > 1) {
-      process.stdout.write('\x1b[2A'); // Move cursor up 2 lines
+    // Throttle updates to max once per 100ms (unless forced)
+    if (!force && (now - this.lastDisplayTime) < 100) {
+      return;
     }
-    process.stdout.write('\x1b[K' + line1 + '\n'); // Clear line and write
-    process.stdout.write('\x1b[K' + line2 + '\n'); // Clear line and write
+
+    const percentage = Math.floor((this.current / this.total) * 100);
+    const elapsed = this.getElapsed();
+    const rate = this.getRate();
+    const remaining = this.getRemaining();
+
+    // Update spinner text
+    this.spinner.text = `${this.current}/${this.total} pages (${percentage}%) | Cached: ${this.fromCache}, Fetched: ${this.fetched} | ${elapsed}s elapsed, ~${remaining} remaining`;
+
+    this.lastDisplayTime = now;
   }
 
   clear() {
-    // Clear the progress display (2 lines)
-    if (this.current > 0) {
-      process.stdout.write('\x1b[2A'); // Move cursor up 2 lines
-      process.stdout.write('\x1b[K\n'); // Clear line 1
-      process.stdout.write('\x1b[K');   // Clear line 2
-      process.stdout.write('\x1b[1A'); // Move cursor back up to start
-    }
+    this.spinner.stop();
+  }
+
+  succeed(message) {
+    this.spinner.succeed(message);
+  }
+
+  fail(message) {
+    this.spinner.fail(message);
   }
 }
 
@@ -535,6 +547,66 @@ class ErrorCollector {
     }
 
     return report.join('\n');
+  }
+}
+
+// ============================================================================
+// CSS Snippet Generator
+// ============================================================================
+
+/**
+ * Creates Obsidian CSS snippet for banner and metadata display
+ * @param {string} vaultPath - Path to the vault directory
+ * @returns {Promise<boolean>} True if snippet was created successfully
+ */
+async function createBannerCSSSnippet(vaultPath) {
+  try {
+    // Create .obsidian/snippets directory if it doesn't exist
+    const snippetsDir = join(vaultPath, '.obsidian', 'snippets');
+    if (!existsSync(snippetsDir)) {
+      await mkdir(snippetsDir, { recursive: true });
+    }
+
+    const snippetPath = join(snippetsDir, 'notion2obsidian-banners.css');
+
+    // Skip if snippet already exists
+    if (existsSync(snippetPath)) {
+      return false; // Already exists
+    }
+
+    const cssContent = `/* Notion to Obsidian - Banner & Metadata Display */
+/* Generated by notion2obsidian enrichment */
+
+/* Hide properties header behind banner */
+.mod-header:has(+ .obsidian-banner-wrapper) {
+    margin-top: var(--banner-height);
+    margin-bottom: calc(-1 * var(--banner-height));
+}
+
+/* Hide the inline title that appears in the document body */
+.inline-title {
+    display: none;
+}
+
+/* Hide metadata in Reading View */
+.markdown-reading-view .metadata-container .metadata-properties-heading {
+    display: none;
+}
+.markdown-reading-view .metadata-container .metadata-content {
+    display: none;
+}
+
+/* Keep properties expanded in Live Preview/Edit mode */
+.markdown-source-view .metadata-container .metadata-content {
+    display: block;
+}
+`;
+
+    await writeFile(snippetPath, cssContent, 'utf-8');
+    return true; // Created successfully
+  } catch (error) {
+    console.warn(chalk.yellow(`⚠ Failed to create CSS snippet: ${error.message}`));
+    return false;
   }
 }
 
@@ -649,6 +721,9 @@ export async function enrichVault(vaultPath, options = {}) {
     imageIcons: 0
   };
 
+  // Collect warnings to display after spinner completes
+  const warnings = [];
+
   // Track timing for dry-run estimation
   const startTime = Date.now();
 
@@ -675,24 +750,23 @@ export async function enrichVault(vaultPath, options = {}) {
       // Download assets if not dry run
       if (!dryRun) {
         if (metadata._iconUrl) {
-          const iconFile = await downloadAsset(client, metadata._iconUrl, vaultPath, page.path, 'icon');
+          const iconFile = await downloadAsset(client, metadata._iconUrl, vaultPath, page.path, 'icon', warnings);
           if (iconFile) {
-            // Obsidian Banners plugin doesn't support image icons yet (only emoji)
-            // Save to icon-file field for future use when plugin supports it
+            // Image icons are downloaded but Iconize plugin prefers emoji
+            // Save to icon-file field for reference
             metadata['icon-file'] = iconFile;
             stats.imageIcons++;
             stats.assetsDownloaded++;
           }
           delete metadata._iconUrl;
         } else if (metadata.icon) {
-          // Emoji icon - use banner_icon field for Obsidian Banners plugin
-          metadata.banner_icon = metadata.icon;
-          delete metadata.icon;
+          // Emoji icon - keep as 'icon' field for Obsidian Iconize plugin
+          // Note: metadata.icon already contains the emoji, no need to rename
           stats.emojiIcons++;
         }
 
         if (metadata._coverUrl) {
-          const coverFile = await downloadAsset(client, metadata._coverUrl, vaultPath, page.path, 'cover');
+          const coverFile = await downloadAsset(client, metadata._coverUrl, vaultPath, page.path, 'cover', warnings);
           if (coverFile) {
             // Use internal link format for Obsidian Banners plugin
             metadata.banner = `![[${coverFile}]]`;
@@ -735,9 +809,27 @@ export async function enrichVault(vaultPath, options = {}) {
     }
   }
 
-  // Final progress display, then clear it
-  progress.display();
-  progress.clear();
+  // Stop the spinner
+  progress.succeed(`Enriched ${stats.pagesEnriched} pages in ${progress.getElapsed()}s`);
+
+  // Display any warnings that occurred during processing
+  if (warnings.length > 0) {
+    console.log();
+    console.log(chalk.yellow.bold(`⚠ ${warnings.length} warnings:`));
+    // Show first 5 warnings
+    warnings.slice(0, 5).forEach(warning => {
+      console.log(chalk.yellow(`  • ${warning}`));
+    });
+    if (warnings.length > 5) {
+      console.log(chalk.gray(`  ... and ${warnings.length - 5} more`));
+    }
+  }
+
+  // Create CSS snippet (only in real mode)
+  let snippetCreated = false;
+  if (!dryRun) {
+    snippetCreated = await createBannerCSSSnippet(vaultPath);
+  }
 
   // Display results
   console.log(chalk.green.bold('Enrichment Complete!'));
@@ -776,7 +868,16 @@ export async function enrichVault(vaultPath, options = {}) {
   console.log();
   console.log(chalk.gray(`Cache: ${CACHE_FILE} updated`));
   console.log(chalk.gray('Banners: Stored in _banners/ folder (install Obsidian Banners plugin to display)'));
-  console.log(chalk.gray('Icons: Emoji icons ready to display; image icons saved to icon-file field (not yet supported by plugin)'));
+  console.log(chalk.gray('Icons: Emoji icons stored in "icon" field (install Obsidian Iconize plugin to display)'));
+
+  if (snippetCreated) {
+    console.log();
+    console.log(chalk.green('✓ CSS snippet created: .obsidian/snippets/notion2obsidian-banners.css'));
+    console.log(chalk.gray('  Enable in Obsidian: Settings → Appearance → CSS snippets'));
+  } else if (!dryRun) {
+    console.log();
+    console.log(chalk.gray('CSS snippet already exists: .obsidian/snippets/notion2obsidian-banners.css'));
+  }
 
   const elapsedMs = Date.now() - startTime;
   const elapsed = Math.floor(elapsedMs / 1000);

@@ -1,6 +1,6 @@
 {
   "name": "notion2obsidian",
-  "version": "2.4.5",
+  "version": "2.5.0",
   "description": "High-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format",
   "type": "module",
   "main": "./notion2obsidian.js",
@@ -46,6 +46,7 @@
     "chalk": "^5.3.0",
     "fflate": "^0.8.2",
     "gray-matter": "^4.0.3",
+    "ora": "^9.0.0",
     "remark": "^15.0.1",
     "remark-frontmatter": "^5.0.0",
     "unist-util-visit": "^5.0.0"

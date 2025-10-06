@@ -67,11 +67,14 @@ chmod +x notion2obsidian.js
 ### Basic Usage
 
 ```bash
-# Run on a zip file (recommended)
+# Run on a zip file with output directory (recommended)
+./notion2obsidian.js ./Export-abc123.zip ~/Obsidian/Vault
+
+# Run on a zip file (extracts in place)
 ./notion2obsidian.js ./Export-abc123.zip
 
-# Run on a directory
-./notion2obsidian.js ./my-notion-export
+# Run on a directory with output
+./notion2obsidian.js ./my-notion-export ~/Obsidian/Vault
 
 # Run on current directory
 ./notion2obsidian.js
@@ -80,7 +83,12 @@ chmod +x notion2obsidian.js
 ### Command Line Options
 
 ```bash
--o, --output DIR    # Output directory for processed files (default: extract location)
+# Positional Arguments
+<input>             # Directory, zip file(s), or glob pattern (*.zip)
+[output]            # Output directory (optional, defaults to extract location)
+
+# Options
+-o, --output DIR    # Output directory (alternative to positional argument)
 -d, --dry-run       # Preview changes without modifying files
                     # (extracts 10% sample or 10MB max for zip files)
 -v, --verbose       # Show detailed processing information
@@ -88,36 +96,35 @@ chmod +x notion2obsidian.js
     --no-callouts   # Disable Notion callout conversion to Obsidian callouts
     --no-csv        # Disable CSV database processing and index generation
     --dataview      # Generate Dataview-compatible CSV structure with individual notes
-    --no-banners    # Disable cover image detection and banner frontmatter
 -h, --help          # Show help message
 ```
 
 ### Examples
 
 ```bash
-# Single zip file
+# Single zip file with output directory (new syntax)
+./notion2obsidian.js ./Export-abc123.zip ~/Obsidian/Vault
+
+# Single zip file (extracts in place)
 ./notion2obsidian.js ./Export-abc123.zip
 
-# Multiple zip files with glob pattern
-./notion2obsidian.js *.zip
+# Multiple zip files with output
+./notion2obsidian.js *.zip ~/Obsidian/Vault
 
-# Multiple zip files with custom output directory
-./notion2obsidian.js *.zip -o ~/Obsidian/Notion-Import
+# Using -o flag (backward compatible)
+./notion2obsidian.js Export-*.zip -o ~/Obsidian/Vault
 
-# Process specific pattern with output
-./notion2obsidian.js Export-*.zip --output ./processed
-
-# Directory processing with custom output
-./notion2obsidian.js ./my-notion-export -o ~/Documents/Obsidian
+# Directory processing
+./notion2obsidian.js ./my-notion-export ~/Documents/Obsidian
 
 # Preview changes (dry run)
-./notion2obsidian.js *.zip --dry-run
+./notion2obsidian.js *.zip ~/Vault --dry-run
 
 # Enable Dataview-compatible CSV processing
-./notion2obsidian.js ./Export-abc123.zip --dataview
+./notion2obsidian.js ./Export-abc123.zip ~/Vault --dataview
 
 # Disable specific features
-./notion2obsidian.js ./Export-abc123.zip --no-callouts --no-csv
+./notion2obsidian.js ./Export-abc123.zip ~/Vault --no-callouts --no-csv
 
 # Using npm scripts
 bun run dry-run ./Export-abc123.zip
@@ -137,7 +144,10 @@ The tool can directly process Notion zip exports:
 
 > **📦 Required Plugin**: Install the [Dataview plugin](https://github.com/blacksmithgu/obsidian-dataview) in Obsidian to view and query database records. Without it, you'll only see the raw Dataview query code.
 
-> **🖼️ Cover Images & Icons**: If using `--enrich` to fetch Notion covers and icons, install the [Obsidian Banners plugin](https://github.com/noatpad/obsidian-banners) to display them. Covers and icons are stored in the `_banners/` folder and referenced in frontmatter.
+> **🖼️ Cover Images & Icons**: If using `--enrich` to fetch Notion covers and icons:
+> - Install [Obsidian Banners plugin](https://github.com/noatpad/obsidian-banners) to display cover images
+> - Install [Obsidian Iconize plugin](https://github.com/FlorianWoelki/obsidian-iconize) to display emoji icons in file explorer and notes
+> - Covers are stored in the `_banners/` folder and referenced in frontmatter
 
 ### CSV Database Processing (Default Mode)
 
@@ -284,7 +294,7 @@ notion-id: "c27e422ef0b04e1d9e57fb3b10b498b3"
 public-url: "https://username.notion.site/Design-Manifesto-c27e422e"
 created: "2023-04-15T10:30:00.000Z"
 modified: "2024-10-02T14:22:00.000Z"
-banner_icon: "🎨"
+icon: "🎨"
 banner: "![[_banners/Design Manifesto-cover.jpg]]"
 tags:
   - "design"
@@ -293,7 +303,7 @@ published: false
 ---
 ```
 
-**Note**: Image icons from Notion are saved to `_banners/` folder with the `icon-file` field, but are not displayed yet because the Obsidian Banners plugin currently only supports emoji icons. Emoji icons work immediately with the `banner_icon` field. All YAML fields are properly quoted for compatibility.
+**Note**: Emoji icons display in file explorer and note titles via the Iconize plugin. Image icons from Notion are saved to `_banners/` folder with the `icon-file` field for reference, but Iconize works best with emoji icons.
 
 ### Features
 
@@ -302,7 +312,8 @@ published: false
 - **💾 Idempotent**: Safe to run multiple times
 - **📊 Progress tracking**: Real-time progress with ETA
 - **🛡️ Error handling**: Continues on individual page errors
-- **🖼️ Asset storage**: Icons and covers saved to `_banners/` folder (e.g., `_banners/PageName-icon.png`, `_banners/PageName-cover.jpg`)
+- **🖼️ Asset storage**: Covers saved to `_banners/` folder (e.g., `_banners/PageName-cover.jpg`)
+- **😀 Emoji icons**: Stored in `icon` field for Iconize plugin compatibility
 
 ### Important Notes
 
@@ -310,6 +321,7 @@ published: false
 - Notion SVG icons are not downloaded (they're just reference URLs)
 - Cache file (`.notion-cache.json`) persists between runs
 - Assets are skipped if they already exist
+- Emoji icons work best with Iconize plugin (enable "Use frontmatter" in plugin settings)
 
 ## 💬 Callout & Visual Element Support
 
@@ -329,29 +341,52 @@ Important information here
 
 ### Cover Images & Icons (with --enrich)
 
-When using `--enrich` mode with the Notion API, cover images and icons are downloaded and stored in the `_banners/` folder. Install the [Obsidian Banners plugin](https://github.com/noatpad/obsidian-banners) to display them.
+When using `--enrich` mode with the Notion API, cover images and emoji icons are fetched from Notion:
 
-**Emoji icons** work immediately:
+**Required Plugins:**
+- [Obsidian Banners](https://github.com/noatpad/obsidian-banners) - Displays cover images
+- [Obsidian Iconize](https://github.com/FlorianWoelki/obsidian-iconize) - Displays emoji icons in file explorer and note titles
+
+**Emoji icons** (displayed by Iconize):
 ```yaml
 ---
 title: "My Page"
+icon: 🏠
 banner: "![[_banners/My Page-cover.jpg]]"
-banner_icon: "📘"
 published: false
 ---
 ```
 
-**Image icons** are downloaded but not yet displayed (plugin limitation):
+**Image icons** are downloaded but stored separately (Iconize prefers emoji):
 ```yaml
 ---
 title: "My Page"
+icon: 🏠
+icon-file: "_banners/My Page-icon.png"  # Downloaded for reference
 banner: "![[_banners/My Page-cover.jpg]]"
-icon-file: "_banners/My Page-icon.png"  # Saved for when plugin supports image icons
 published: false
 ---
 ```
 
-**Note**: The Obsidian Banners plugin currently only supports emoji for `banner_icon`. Image icons are listed as a future feature in their roadmap.
+**Setup Iconize:**
+1. Install Iconize plugin from Community Plugins
+2. Enable it in Settings → Community Plugins
+3. In Iconize settings, enable "Use frontmatter" option
+4. Icons will automatically appear in file explorer and note titles
+
+### CSS Snippet for Banner Display
+
+Enrichment automatically creates a CSS snippet (`.obsidian/snippets/notion2obsidian-banners.css`) that:
+- Hides the properties header behind banners for a cleaner look
+- Hides the inline title in the document body
+- Hides metadata in Reading View while keeping it visible in Edit mode
+
+**Enable the snippet:**
+1. Open Obsidian Settings
+2. Go to **Appearance** → **CSS snippets**
+3. Enable `notion2obsidian-banners`
+
+The snippet is only created once and won't overwrite existing customizations.
 
 ## 📊 Sample Output
 

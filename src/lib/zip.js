@@ -34,14 +34,12 @@ export async function extractZipToSameDirectory(zipPath, options = {}) {
     extractDir = join(zipDir, `${shortName}-extracted`);
   }
 
-  if (!suppressMessages) {
-    console.log(chalk.cyan('📦 Extracting zip file...'));
-    console.log(chalk.gray(`Extracting to: ${extractDir}`));
+  // Track timing
+  const startTime = Date.now();
 
-    if (sample) {
-      console.log(chalk.yellow(`Sample mode: extracting up to ${samplePercentage * 100}% or ${Math.round(maxSampleBytes / 1_000_000)}MB for preview`));
-    }
-    console.log();
+  if (!suppressMessages) {
+    const sampleText = sample ? ` (sample: ${samplePercentage * 100}% or ${Math.round(maxSampleBytes / 1_000_000)}MB)` : '';
+    console.log(chalk.cyan(`Extracting ${basename(zipPath)}${sampleText}...`));
   }
 
   try {
@@ -142,11 +140,14 @@ export async function extractZipToSameDirectory(zipPath, options = {}) {
       }
     }
 
+    // Calculate elapsed time
+    const elapsedSeconds = ((Date.now() - startTime) / 1000).toFixed(1);
+
     if (!suppressMessages) {
       if (isSampled) {
-        console.log(chalk.green(`✓ Extracted ${fileCount} of ${totalFiles} files (${Math.round(fileCount / totalFiles * 100)}% sample)\n`));
+        console.log(chalk.green(`✓ Extracted ${fileCount} of ${totalFiles} files (${Math.round(fileCount / totalFiles * 100)}% sample) in ${elapsedSeconds}s\n`));
       } else {
-        console.log(chalk.green(`✓ Extraction complete (${fileCount} files)\n`));
+        console.log(chalk.green(`✓ Extraction complete (${fileCount} files) in ${elapsedSeconds}s\n`));
       }
     }
 
@@ -159,8 +160,8 @@ export async function extractZipToSameDirectory(zipPath, options = {}) {
       const subdirStat = await stat(potentialSubdir).catch(() => null);
       if (subdirStat?.isDirectory()) {
         if (!suppressMessages) {
-          console.log(chalk.gray(`Found subdirectory inside zip: ${entries[0]}`));
-          console.log(chalk.gray(`Working directory: ${extractDir}\n`));
+          console.log(chalk.gray(`  Found subdirectory: ${entries[0]}`));
+          console.log(chalk.gray(`  Working directory: ${extractDir}\n`));
         }
         return {
           path: potentialSubdir,
@@ -196,8 +197,8 @@ export async function extractZipToSameDirectory(zipPath, options = {}) {
       }
 
       if (bestSubdir && maxMdFiles > 0) {
-        console.log(chalk.gray(`Found ${maxMdFiles} markdown files in subdirectory: ${basename(bestSubdir)}`));
-        console.log(chalk.gray(`Working directory: ${extractDir}\n`));
+        console.log(chalk.gray(`  Found ${maxMdFiles} markdown files in subdirectory: ${basename(bestSubdir)}`));
+        console.log(chalk.gray(`  Working directory: ${extractDir}\n`));
         return {
           path: bestSubdir,
           extractDir, // Return parent for cleanup
@@ -210,6 +211,10 @@ export async function extractZipToSameDirectory(zipPath, options = {}) {
 
     return { path: extractDir, extractDir, isSampled, sampleCount: fileCount, totalCount: totalFiles };
   } catch (err) {
+    if (!suppressMessages) {
+      console.log(chalk.red(`✗ Extraction failed: ${err.message}`));
+    }
+
     // Clean up on error
     await rm(extractDir, { recursive: true, force: true });
     throw err;

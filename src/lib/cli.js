@@ -51,9 +51,16 @@ export function parseArgs() {
     } else if (arg === '--enrich') {
       config.enrich = true;
     } else if (!arg.startsWith('-')) {
+      // Positional arguments: first is input(s), last is output (if more than one positional arg)
       config.targetPaths.push(arg);
       config.pathsExplicitlyProvided = true;
     }
+  }
+
+  // Handle positional output directory (if no -o flag was used)
+  // If we have 2+ positional args and no explicit outputDir, treat last as output
+  if (config.outputDir === null && config.targetPaths.length >= 2) {
+    config.outputDir = config.targetPaths.pop(); // Remove and use last arg as output
   }
 
   // Default to current directory if no paths provided
@@ -87,10 +94,15 @@ export function showHelp() {
 ${chalk.blueBright.bold('💎 Notion 2 Obsidian')} ${chalk.gray(`v${getVersion()}`)}
 
 ${chalk.yellow('Usage:')}
-  notion2obsidian [directory|zip-file(s)|glob-pattern] [options]
+  notion2obsidian <input> [output] [options]
+  notion2obsidian <input> -o <output> [options]
+
+${chalk.yellow('Arguments:')}
+  input               Directory, zip file(s), or glob pattern (*.zip)
+  output              Output directory (optional, defaults to extract location)
 
 ${chalk.yellow('Options:')}
-  -o, --output DIR    Output directory for processed files (default: extract location)
+  -o, --output DIR    Output directory (alternative to positional argument)
   -d, --dry-run       Preview changes without modifying files
                       (extracts 10% sample or 10MB max for zip files)
   -v, --verbose       Show detailed processing information
@@ -102,20 +114,23 @@ ${chalk.yellow('Options:')}
   -h, --help          Show this help message
 
 ${chalk.yellow('Examples:')}
-  ${chalk.gray('# Single zip file')}
+  ${chalk.gray('# Single zip file with output directory')}
+  notion2obsidian ./Export-abc123.zip ~/Obsidian/Vault
+
+  ${chalk.gray('# Single zip file (extracts in place)')}
   notion2obsidian ./Export-abc123.zip
 
-  ${chalk.gray('# Multiple zip files with custom output')}
-  notion2obsidian *.zip -o ~/Obsidian/Notion-Import
+  ${chalk.gray('# Multiple zip files with output')}
+  notion2obsidian *.zip ~/Obsidian/Vault
 
-  ${chalk.gray('# Multiple zip files with glob pattern')}
-  notion2obsidian Export-*.zip --output ./processed
+  ${chalk.gray('# Using -o flag (backward compatible)')}
+  notion2obsidian Export-*.zip -o ~/Obsidian/Vault
 
-  ${chalk.gray('# Directory processing with output')}
-  notion2obsidian ./my-notion-export -o ~/Documents/Obsidian
+  ${chalk.gray('# Directory processing')}
+  notion2obsidian ./my-notion-export ~/Documents/Obsidian
 
   ${chalk.gray('# Dry run to preview changes')}
-  notion2obsidian *.zip --dry-run
+  notion2obsidian *.zip ~/Vault --dry-run
 
   ${chalk.gray('# Enrich with Notion API metadata (requires NOTION_TOKEN)')}
   notion2obsidian ./my-vault --enrich

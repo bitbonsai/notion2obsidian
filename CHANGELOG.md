@@ -9,6 +9,44 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.5.0] - 2025-10-06 - UX Improvements & Iconize Integration
+
+### ✨ New Features
+- **🎨 Iconize Plugin Support**: Switched from Obsidian Banners to Iconize plugin for emoji icons
+  - Emoji icons now use `icon` field instead of `banner_icon`
+  - Works perfectly with Iconize plugin for file explorer and note title icons
+  - Better compatibility and more flexible icon display
+- **📊 Progress Spinners**: Added elegant `ora` spinner for migration and enrichment progress
+  - Animated spinner shows real-time progress
+  - Single-line updates (no more multiple progress lines)
+  - Clean success/failure indicators with checkmarks
+- **⌨️ Improved CLI**: New positional argument syntax for output directory
+  - New: `notion2obsidian input.zip output-dir`
+  - Old `-o` flag still works for backward compatibility
+  - More intuitive CLI matching standard tools like `cp` and `mv`
+- **🚀 Streamlined UX**: Removed confirmation prompts
+  - No more "Press ENTER to continue" interruptions
+  - Ctrl+C works properly to interrupt operations
+  - Faster workflow for repeated migrations
+
+### 🐛 Bug Fixes
+- Fixed directory renaming path update logic using substring instead of replace
+- Fixed enrichment warnings interrupting spinner (now collected and shown after)
+- Fixed progress display creating multiple lines when all pages cached
+
+### 📝 Documentation
+- Updated all examples to show new CLI syntax
+- Added Iconize plugin setup instructions
+- Updated CSS snippet to remove banner_icon styling
+- Clarified emoji icon vs image icon handling
+
+### 🎯 Breaking Changes
+- **Icon field change**: `banner_icon` → `icon` (for Iconize plugin)
+  - Banner images still use `banner` field (unchanged)
+  - Image icons saved to `icon-file` field for reference
+
+---
+
 ## [2.4.5] - 2025-10-06 - Banner Format & Icon Handling
 
 ### 🐛 Bug Fixes

@@ -10,6 +10,7 @@ import { spawn } from "node:child_process";
 import { unzipSync } from "fflate";
 import chalk from "chalk";
 import matter from "gray-matter";
+import ora from "ora";
 
 // Import from modular files
 import {
@@ -178,17 +179,11 @@ async function main() {
       process.exit(1);
     }
 
-    // Confirm if using current directory without explicit argument
+    // Show warning if using current directory without explicit argument
     if (!config.pathsExplicitlyProvided) {
       const cwd = process.cwd();
-      console.log(chalk.yellow('⚠ No directory specified. This will run on the current directory:'));
+      console.log(chalk.yellow('⚠ No directory specified. Running on current directory:'));
       console.log(chalk.blue(`  ${cwd}\n`));
-      console.log(chalk.yellow('Press ENTER to continue, or Ctrl+C to cancel...'));
-
-      const reader = Bun.stdin.stream().getReader();
-      await reader.read();
-      reader.releaseLock();
-      console.log();
     }
   } else if (directories.length > 1) {
     console.log(chalk.red('❌ Multiple directories not supported. Please specify zip files or a single directory.'));
@@ -271,13 +266,8 @@ async function main() {
   if (notionFiles.length === 0 && files.length > 0) {
     console.log(chalk.yellow('⚠ Warning: No Notion ID patterns detected in filenames.'));
     console.log(chalk.gray('This directory may not be a Notion export.'));
-    console.log(chalk.gray('Expected filenames like: "Document abc123def456...xyz.md"\n'));
-    console.log(chalk.yellow('Continue anyway? Press ENTER to proceed, or Ctrl+C to cancel...'));
-
-    const reader = Bun.stdin.stream().getReader();
-    await reader.read();
-    reader.releaseLock();
-    console.log();
+    console.log(chalk.gray('Expected filenames like: "Document abc123def456...xyz.md"'));
+    console.log(chalk.gray('Proceeding anyway...\n'));
   }
 
   // Check for duplicates
@@ -465,7 +455,11 @@ async function main() {
   const migrationStartTime = Date.now();
 
   // Step 1: Add frontmatter and convert links
-  console.log(chalk.green('Step 1: Adding frontmatter and converting links...'));
+  // Create spinner for migration steps
+  const spinner = ora({
+    text: 'Step 1/5: Adding frontmatter and converting links...',
+    color: 'cyan'
+  }).start();
 
   // Process files in batches
   for (let i = 0; i < fileMigrationMap.length; i += BATCH_SIZE) {
@@ -488,10 +482,10 @@ async function main() {
     });
   }
 
-  console.log(`  ${chalk.green('✓')} Processed ${stats.processedFiles} files, converted ${stats.totalLinks} links\n`);
+  spinner.succeed(`Step 1/5: Processed ${stats.processedFiles} files, converted ${stats.totalLinks} links`);
 
   // Step 2: Organize attachments (before renaming, while names still match!)
-  console.log(chalk.green('Step 2: Organizing files with attachments...'));
+  spinner.start('Step 2/5: Organizing files with attachments...');
 
   let movedFiles = 0;
   const filesMovedIntoFolders = new Set(); // Track which files were moved
@@ -611,10 +605,10 @@ async function main() {
     }
   }
 
-  console.log(`  ${chalk.green('✓')} Moved ${movedFiles} files into their attachment folders\n`);
+  spinner.succeed(`Step 2/5: Moved ${movedFiles} files into their attachment folders`);
 
   // Step 3: Rename directories (deepest first to avoid path conflicts)
-  console.log(chalk.green('Step 3: Renaming directories...'));
+  spinner.start('Step 3/5: Renaming directories...');
 
   for (let i = 0; i < dirMigrationMap.length; i++) {
     const dir = dirMigrationMap[i];
@@ -646,17 +640,20 @@ async function main() {
     }
   }
 
-  console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedDirs} directories\n`);
+  spinner.succeed(`Step 3/5: Renamed ${stats.renamedDirs} directories`);
 
   // Update file paths in fileMigrationMap and filesMovedIntoFolders to reflect renamed directories
   // Process directories from deepest to shallowest to handle nested renames correctly
   const updatedMovedFiles = new Set();
   for (const file of fileMigrationMap) {
     let originalPath = file.oldPath;
+    // Apply directory renames in reverse order (deepest first already sorted)
     for (const dir of dirMigrationMap) {
+      // Check if file is inside this renamed directory
       if (file.oldPath.startsWith(dir.oldPath + '/') && dir.actualNewPath) {
-        file.oldPath = file.oldPath.replace(dir.oldPath, dir.actualNewPath);
-        // Don't break - a file might be affected by multiple directory renames
+        // Replace only the first occurrence (the directory path prefix)
+        const relativePath = file.oldPath.substring(dir.oldPath.length);
+        file.oldPath = dir.actualNewPath + relativePath;
       }
     }
     // Debug logging for problematic files
@@ -675,7 +672,7 @@ async function main() {
   }
 
   // Step 4: Rename individual files that weren't moved to attachment folders
-  console.log(chalk.green('Step 4: Renaming individual files...'));
+  spinner.start('Step 4/5: Renaming individual files...');
 
   for (const file of fileMigrationMap) {
     // Skip files that were already moved into attachment folders
@@ -746,13 +743,13 @@ async function main() {
     }
   }
 
-  console.log(`  ${chalk.green('✓')} Renamed ${stats.renamedFiles} individual files\n`);
+  spinner.succeed(`Step 4/5: Renamed ${stats.renamedFiles} individual files`);
 
   // Step 5: Normalize all images and references
   const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.bmp', '.ico'];
 
   // Step 5a: Normalize ALL image files in ALL directories
-  console.log(chalk.green('Step 5a: Normalizing all image files...'));
+  spinner.start('Step 5/5: Normalizing image files and references...');
 
   let normalizedImages = 0;
 
@@ -802,10 +799,8 @@ async function main() {
     }
   }
 
-  console.log(`  ${chalk.green('✓')} Normalized ${normalizedImages} image files\n`);
 
   // Step 5b: Update all image references using remark (proper markdown parsing)
-  console.log(chalk.green('Step 5b: Normalizing all image references...'));
 
   const { unified } = await import('unified');
   const { remark } = await import('remark');
@@ -927,7 +922,7 @@ async function main() {
     }
   }
 
-  console.log(`  ${chalk.green('✓')} Normalized ${updatedReferences} image references\n`);
+  spinner.succeed(`Step 5/5: Normalized ${normalizedImages} images and ${updatedReferences} references`);
 
   // Step 6: Process CSV databases if enabled
   if (config.processCsv) {

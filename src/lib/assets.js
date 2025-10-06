@@ -49,18 +49,7 @@ export async function promptForConfirmation(dryRun) {
     return;
   }
 
-  console.log(chalk.yellow('\nPress ENTER to proceed with the migration, or Ctrl+C/ESC to cancel...'));
-
-  const reader = Bun.stdin.stream().getReader();
-  const { value } = await reader.read();
-  reader.releaseLock();
-
-  // Check if ESC key was pressed (ASCII 27 or sequence starting with \x1b)
-  if (value && value.length > 0) {
-    // ESC key sends ASCII 27 (0x1B) or escape sequences starting with it
-    if (value[0] === 27 || (value.length >= 3 && value[0] === 0x1B)) {
-      console.log(chalk.red('\n✖ Migration cancelled'));
-      process.exit(0);
-    }
-  }
+  // No confirmation prompt - removed to streamline UX
+  // User can use Ctrl+C to cancel during migration if needed
+  console.log();
 }
