@@ -284,7 +284,7 @@ export async function scanVaultForNotionPages(vaultPath) {
  * @param {Object} newMetadata - New metadata to merge
  * @returns {Object} Merged frontmatter
  */
-function mergeFrontmatter(existingFrontmatter, newMetadata) {
+export function mergeFrontmatter(existingFrontmatter, newMetadata) {
   const merged = { ...existingFrontmatter };
 
   // Add new fields, preserving existing ones
@@ -292,6 +292,11 @@ function mergeFrontmatter(existingFrontmatter, newMetadata) {
     if (value !== null && value !== undefined) {
       merged[key] = value;
     }
+  }
+
+  // If page has a public URL, set published to true
+  if (newMetadata['public-url']) {
+    merged.published = true;
   }
 
   return merged;

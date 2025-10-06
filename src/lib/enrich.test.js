@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from "bun:test";
 import { mkdtemp, rm, writeFile, mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { getNotionToken, scanVaultForNotionPages } from "./enrich.js";
+import { getNotionToken, scanVaultForNotionPages, mergeFrontmatter } from "./enrich.js";
 
 // ============================================================================
 // Test Utilities
@@ -503,6 +503,85 @@ describe("Cache Manager", () => {
 
     expect(loaded['abc123']).toBeDefined();
     expect(loaded['abc123'].data.created_time).toBe('2023-01-01');
+  });
+});
+
+// ============================================================================
+// Frontmatter Merging Tests
+// ============================================================================
+
+describe("mergeFrontmatter", () => {
+  test("sets published to true when public URL exists", () => {
+    const existingFrontmatter = {
+      title: "My Page",
+      published: false,
+      tags: ["test"]
+    };
+
+    const newMetadata = {
+      'public-url': 'https://username.notion.site/My-Page-abc123',
+      'created': '2023-01-01T00:00:00Z'
+    };
+
+    const merged = mergeFrontmatter(existingFrontmatter, newMetadata);
+
+    expect(merged.published).toBe(true);
+    expect(merged['public-url']).toBe('https://username.notion.site/My-Page-abc123');
+    expect(merged.title).toBe("My Page");
+  });
+
+  test("keeps published false when no public URL", () => {
+    const existingFrontmatter = {
+      title: "Private Page",
+      published: false,
+      tags: ["test"]
+    };
+
+    const newMetadata = {
+      'created': '2023-01-01T00:00:00Z',
+      'modified': '2023-01-02T00:00:00Z'
+    };
+
+    const merged = mergeFrontmatter(existingFrontmatter, newMetadata);
+
+    expect(merged.published).toBe(false);
+    expect(merged['public-url']).toBeUndefined();
+  });
+
+  test("overrides published false with true when public URL added", () => {
+    const existingFrontmatter = {
+      title: "Page",
+      published: false
+    };
+
+    const newMetadata = {
+      'public-url': 'https://notion.site/Page-123'
+    };
+
+    const merged = mergeFrontmatter(existingFrontmatter, newMetadata);
+
+    expect(merged.published).toBe(true);
+  });
+
+  test("preserves existing fields while merging", () => {
+    const existingFrontmatter = {
+      title: "Test",
+      tags: ["a", "b"],
+      custom: "field"
+    };
+
+    const newMetadata = {
+      'created': '2023-01-01',
+      'public-url': 'https://notion.site/test'
+    };
+
+    const merged = mergeFrontmatter(existingFrontmatter, newMetadata);
+
+    expect(merged.title).toBe("Test");
+    expect(merged.tags).toEqual(["a", "b"]);
+    expect(merged.custom).toBe("field");
+    expect(merged.created).toBe('2023-01-01');
+    expect(merged.published).toBe(true);
   });
 });
 
