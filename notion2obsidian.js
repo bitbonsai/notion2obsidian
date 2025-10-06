@@ -25,7 +25,7 @@ import {
 import { MigrationStats } from "./src/lib/stats.js";
 import { parseArgs, getVersion, showVersion, showHelp } from "./src/lib/cli.js";
 import { buildFileMap, convertMarkdownLinkToWiki } from "./src/lib/links.js";
-import { ICON_TO_CALLOUT, convertNotionCallouts, detectCoverImage } from "./src/lib/callouts.js";
+import { ICON_TO_CALLOUT, convertNotionCallouts } from "./src/lib/callouts.js";
 import {
   extractInlineMetadataFromLines,
   getTagsFromPath,

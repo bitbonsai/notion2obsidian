@@ -17,7 +17,6 @@ export function parseArgs() {
     pathsExplicitlyProvided: false,
     convertCallouts: true,
     processCsv: true,
-    preserveBanners: true,
     dataviewMode: false,  // Default to traditional mode (CSV only, no individual MD files)
     enrich: false  // Enrichment mode
   };
@@ -49,8 +48,6 @@ export function parseArgs() {
       config.processCsv = false;
     } else if (arg === '--dataview') {
       config.dataviewMode = true;  // Enable individual MD file creation from CSV rows
-    } else if (arg === '--no-banners') {
-      config.preserveBanners = false;
     } else if (arg === '--enrich') {
       config.enrich = true;
     } else if (!arg.startsWith('-')) {
@@ -101,7 +98,6 @@ ${chalk.yellow('Options:')}
       --no-callouts   Disable Notion callout conversion to Obsidian callouts
       --no-csv        Disable CSV database processing and index generation
       --dataview      Create individual MD files from CSV rows (default: keep CSV only)
-      --no-banners    Disable cover image detection and banner frontmatter
   -V, --version       Show version number
   -h, --help          Show this help message
 
@@ -120,6 +116,12 @@ ${chalk.yellow('Examples:')}
 
   ${chalk.gray('# Dry run to preview changes')}
   notion2obsidian *.zip --dry-run
+
+  ${chalk.gray('# Enrich with Notion API metadata (requires NOTION_TOKEN)')}
+  notion2obsidian ./my-vault --enrich
+
+  ${chalk.gray('# Full workflow: migrate + enrich')}
+  notion2obsidian Export-abc123.zip -o ./vault && notion2obsidian ./vault --enrich
 
 ${chalk.blueBright('Features:')}
   • Accepts zip files directly (extracts and merges to unified directory)
