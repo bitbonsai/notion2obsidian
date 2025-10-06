@@ -513,6 +513,32 @@ My Document 2d6fa1e5/
                     <p style="margin-top: 0.75rem; color: var(--color-text-dim); font-size: 0.9rem;">Install in Obsidian: Settings → Community plugins → Browse → "Dataview" → Install & Enable</p>
                 </div>
                 <div class="faq-item">
+                    <h3><span class="faq-icon">?</span> How do I enrich my vault with Notion API metadata?</h3>
+                    <p>The <code>--enrich</code> flag adds creation dates, last edited times, public URLs, and downloads cover images from Notion. Here's how to set it up:</p>
+                    <div class="example" style="margin-top: 1rem;">
+                        <div style="margin-bottom: 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 1: Get your Notion Integration Token</strong></div>
+                        <ol style="margin: 0; padding-left: 1.5rem; color: var(--color-text); line-height: 1.6;">
+                            <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener">notion.so/my-integrations</a></li>
+                            <li>Click "New integration" and give it a name (e.g., "Obsidian Migration")</li>
+                            <li>Under "Capabilities", enable "Read content"</li>
+                            <li>Copy the "Internal Integration Secret" (starts with <code>secret_</code>)</li>
+                        </ol>
+                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 2: Connect the integration to your workspace</strong></div>
+                        <ol style="margin: 0; padding-left: 1.5rem; color: var(--color-text); line-height: 1.6;">
+                            <li>In Notion, go to Settings & Members → Connections</li>
+                            <li>Find your integration and click "Connect"</li>
+                        </ol>
+                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 3: Create a .env file in your vault directory</strong></div>
+                        <pre style="color: var(--color-success);">cd ~/Documents/Obsidian/MyVault
+echo "NOTION_TOKEN=secret_xxx" > .env</pre>
+                        <div style="margin: 1rem 0 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 4: Run enrichment</strong></div>
+                        <pre style="color: var(--color-success);">notion2obsidian . --enrich</pre>
+                        <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(130, 80, 231, 0.1); border-left: 3px solid #8250E7; border-radius: 0.25rem; font-size: 0.9rem;">
+                            💡 <strong>Tip:</strong> Add <code>.env</code> to your <code>.gitignore</code> to keep your token private
+                        </div>
+                    </div>
+                </div>
+                <div class="faq-item">
                     <h3><span class="faq-icon">?</span> Can I undo the migration?</h3>
                     <p>Yes. Your original .zip file is never touched. Simply delete the output directory and run the migration again to start fresh. The tool automatically cleans up temporary files, so you only need to manage the output directory.</p>
                 </div>
