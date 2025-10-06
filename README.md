@@ -434,95 +434,123 @@ Callout conversion is enabled by default. To disable, use `--no-callouts` flag.
 ## 📊 Sample Output
 
 ```
-📦 Extracting zip file...
-Extracting to: Export-2d6f-extracted
-Sample mode: extracting up to 10% or 10MB for preview
+💎 Notion 2 Obsidian v2.5.2
 
-✓ Extracted 12 of 2088 files (1% sample)
+🔍 Resolving input paths...
+Found 1 zip file(s) to process
 
-Using subdirectory: Export-abc123...
+📦 Extracting 1 zip files to unified directory...
+Merge directory: /Users/user/.cache/notion2obsidian-xyz123
+Note: Will automatically extract any nested zip files found
 
-📦 Notion to Obsidian
-Directory: Export-2d6f-extracted/Export-abc123...
-Mode: DRY RUN (no changes will be made)
+[1/1] Export-abc123.zip
+✓ Extracted 1 zip files successfully!
+  Total files: 2089
+
+Found content in subdirectory: Export-abc123...
+📋 Moving content to output directory...
+✓ Content moved to output directory
+
+💎 Notion 2 Obsidian v2.5.2
+Directory: /Users/user/Obsidian/Vault
 
 Phase 1: Analyzing files and building migration map...
 
-Found 542 markdown files
-Found 23 directories
+🔍 Directory structure analysis:
+  Target directory contains 190 items:
+    📁 Projects abc123...
+    📄 Travel Notes xyz789....md
+    📄 Meeting Minutes.md
+    📁 Work Documents def456...
+    📁 Personal
+    ... and 185 more items
 
-⚠ Warning: 5 duplicate filenames found
+Found 2404 markdown files
+Found 516 directories
+
+⚠ Warning: 865 duplicate filenames found
 These will be disambiguated using folder paths in frontmatter.
 
 ═══ MIGRATION PREVIEW ═══
 
-Files to rename: 542
+Files to rename: 1178
 
 Sample:
-  − My Note abc123def456...xyz.md
-  + My Note.md
+  − Travel Notes xyz789abc123def456...890.md
+  + Travel Notes.md
 
-Directories to rename: 23
+Directories to rename: 233
 
 Sample:
-  − Project Folder abc123...
-  + Project Folder
+  − Project Archive abc123def456...789
+  + Project Archive
+
+Duplicate handling:
+  "Travel Notes.md" will be disambiguated by folder path in frontmatter
+  "Meeting Minutes.md" will be disambiguated by folder path in frontmatter
+  "Documentation.md" will be disambiguated by folder path in frontmatter
 
 Sample frontmatter:
 
-For file: My Note.md
+For file: Travel Notes.md
 
 ---
-title: "My Note"
-tags: [projects, work]
+title: "Travel Notes"
 aliases:
-  - "My Note abc123def456...xyz"
-notion-id: "abc123def456789012345678901234567"
-folder: "Work/Projects"
+  - "Travel Notes xyz789abc123def456...890"
+notion-id: "xyz789abc123def456789012345678901"
 published: false
 ---
 
 ═══ SUMMARY ═══
-  📄 Add frontmatter to 542 files
-  🔗 Convert ~1247 markdown links to wiki links
-  📋 Handle 5 duplicate filenames with folder context
-  ✏️  Rename 542 files
-  📁 Rename 23 directories
-
-Press ENTER to proceed with the migration, or Ctrl+C to cancel...
+  📄 Add frontmatter to 2404 files
+  🔗 Convert ~8654 markdown links to wiki links
+  📋 Handle 865 duplicate filenames with folder context
+  ✏️  Rename 1178 files
+  📁 Rename 233 directories
 
 Phase 2: Executing migration...
 
-Step 1: Adding frontmatter and converting links...
-  ✓ Processed 542 files, converted 1247 links
+✔ Step 1/5: Processed 2404 files, converted 370 links
+✔ Step 2/5: Moved 179 files into their attachment folders
+✔ Step 3/5: Renamed 233 directories
+✔ Step 4/5: Renamed 1178 individual files
+✔ Step 5/5: Normalized 0 images and 0 references
+Step 6: Processing CSV databases...
+  ✓ Processed 159 CSV files, created 108 database indexes
 
-Step 2: Renaming files...
-  ✓ Renamed 542 files
-
-Step 3: Renaming directories...
-  ✓ Renamed 23 directories
-
-✅ Migration complete!
+✅ Migration complete! Processed 3.55 GB in 3.6 seconds
 
 Summary:
-   📄 Added frontmatter to 542 files
-   🔗 Converted 1247 markdown links to wiki links
-   ✏️  Renamed 542 files
-   📁 Renamed 23 directories
+   📄 Added frontmatter to 2404 files
+   🔗 Converted 370 markdown links to wiki links
+   💬 Converted 23 Notion callouts to Obsidian format
+   📊 Created 108 database index pages from 159 CSV files
+   ✏️  Renamed 1178 files
+   📁 Renamed 233 directories
+   📦 Moved 179 files into attachment folders
+
+📝 328 naming conflicts resolved:
+   • Untitled abc123...: Target exists, renamed to Untitled-1
+   • Untitled def456...: Target exists, renamed to Untitled-2
+   • Untitled xyz789...: Target exists, renamed to Untitled-3
+   ... and 325 more
 
 Notes:
    • Duplicate filenames preserved with folder context
    • Original filenames stored as aliases
    • URL-encoded links converted to wiki links
 
-🎉 Your Notion export is now ready for Obsidian!
-Open directory: my-export
+🎉 Migration Complete!
+Time: 3.6s  •  Size: 3.55 GB
+Directory: /Users/user/Obsidian/Vault
 
-📁 Extracted Directory:
-   Export-2d6f-extracted
+Your Notion export is now ready for Obsidian!
+✓ Opening directory...
 
-   You can now open this directory in Obsidian.
-   To remove the extracted files, run: rm -rf "Export-2d6f-extracted"
+💡 Scroll up to review the full migration summary and any warnings.
+
+🗑️  Cleaned up temporary extraction directory
 ```
 
 ## 🏗️ Architecture & Optimizations
