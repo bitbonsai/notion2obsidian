@@ -46,6 +46,7 @@ import { extractZipToSameDirectory, extractMultipleZips } from "./src/lib/zip.js
 import {
   processCsvDatabases,
   generateDatabaseIndex,
+  generateSqlSealIndex,
   createNotesFromCsvRows,
   generateDataviewIndex
 } from "./src/lib/csv.js";
@@ -1044,12 +1045,15 @@ async function main() {
             }
           }
 
-          const indexMarkdown = generateDatabaseIndex(csvInfo, targetDir);
+          // Generate index using SQL Seal or Dataview syntax based on config
+          const indexMarkdown = config.sqlsealMode
+            ? generateSqlSealIndex(csvInfo, targetDir)
+            : generateDatabaseIndex(csvInfo, targetDir);
           const indexPath = join(baseDir, `${csvInfo.databaseName}_Index.md`);
           await Bun.write(indexPath, indexMarkdown);
 
           if (config.verbose) {
-            console.log(`    ✓ Created index for ${csvInfo.databaseName} (${csvInfo.rows.length} records)`);
+            console.log(`    ✓ Created ${config.sqlsealMode ? 'SQL Seal' : 'Dataview'} index for ${csvInfo.databaseName} (${csvInfo.rows.length} records)`);
           }
         }
 

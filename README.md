@@ -123,6 +123,7 @@ notion2obsidian
     --no-callouts   # Disable Notion callout conversion to Obsidian callouts
     --no-csv        # Disable CSV database processing and index generation
     --dataview      # Create individual markdown notes from CSV rows (default: CSV only)
+    --sqlseal       # Use SQL Seal query syntax instead of Dataview (default: Dataview)
 -h, --help          # Show help message
 ```
 
@@ -149,6 +150,9 @@ notion2obsidian *.zip ~/Vault --dry-run
 
 # Create individual notes from CSV rows (optional)
 notion2obsidian ./Export-abc123.zip ~/Vault --dataview
+
+# Use SQL Seal for database queries (alternative to Dataview)
+notion2obsidian ./Export-abc123.zip ~/Vault --sqlseal
 
 # Disable specific features
 notion2obsidian ./Export-abc123.zip ~/Vault --no-callouts --no-csv
@@ -227,6 +231,58 @@ notion2obsidian ./Export-abc123.zip ~/Vault --dataview
 - Copies CSV files to `_databases/` folder
 - Generates notes with database tags and frontmatter
 - **Not recommended for large databases** (can create hundreds of files)
+
+#### Alternative: SQL Seal Mode (`--sqlseal`)
+
+For users who prefer SQL syntax over Dataview, use the `--sqlseal` flag to generate SQL Seal-compatible queries:
+
+```bash
+notion2obsidian ./Export-abc123.zip ~/Vault --sqlseal
+```
+
+**What changes:**
+- Index files use SQL Seal syntax instead of Dataview
+- Queries use standard SQL (`SELECT`, `FROM`, `WHERE`, `ORDER BY`)
+- Includes example queries for filtering, sorting, and aggregation
+- Requires [SQL Seal plugin](https://github.com/h-sphere/sql-seal) instead of Dataview
+
+**SQL Seal Index format:**
+```markdown
+# Tasks
+
+Database with 6 records.
+
+**CSV File:** [[Tasks.csv|Open in spreadsheet app]]
+
+## All Records
+
+```sqlseal
+TABLE tasks = file("Tasks.csv")
+
+SELECT Task name, Status, Assignee, Due, Priority
+FROM tasks
+```
+
+## Example Queries
+
+```sqlseal
+-- Filter records
+SELECT * FROM tasks
+WHERE Status LIKE '%Active%'
+
+-- Sort by column
+SELECT * FROM tasks
+ORDER BY Due ASC
+
+-- Count records
+SELECT COUNT(*) as total FROM tasks
+```
+\```
+
+**Why use SQL Seal?**
+- More familiar for users with SQL experience
+- More powerful query capabilities (JOINs, CTEs, aggregations)
+- Parameterized queries using note properties
 
 ## 🔮 Notion API Enrichment
 
@@ -434,7 +490,7 @@ Callout conversion is enabled by default. To disable, use `--no-callouts` flag.
 ## 📊 Sample Output
 
 ```
-💎 Notion 2 Obsidian v2.5.2
+💎 Notion 2 Obsidian v2.6.0
 
 🔍 Resolving input paths...
 Found 1 zip file(s) to process
@@ -451,7 +507,7 @@ Found content in subdirectory: Export-abc123...
 📋 Moving content to output directory...
 ✓ Content moved to output directory
 
-💎 Notion 2 Obsidian v2.5.2
+💎 Notion 2 Obsidian v2.6.0
 Directory: /Users/user/Obsidian/Vault
 
 Phase 1: Analyzing files and building migration map...
@@ -556,7 +612,7 @@ Your Notion export is now ready for Obsidian!
 ### Enrichment Output Example
 
 ```
-💎 Notion 2 Obsidian v2.5.2
+💎 Notion 2 Obsidian v2.6.0
 
 💎 Notion API Enrichment
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

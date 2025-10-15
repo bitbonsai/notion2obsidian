@@ -18,6 +18,7 @@ export function parseArgs() {
     convertCallouts: true,
     processCsv: true,
     dataviewMode: false,  // Default to traditional mode (CSV only, no individual MD files)
+    sqlsealMode: false,  // Use SQL Seal queries instead of Dataview
     enrich: false  // Enrichment mode
   };
 
@@ -48,6 +49,8 @@ export function parseArgs() {
       config.processCsv = false;
     } else if (arg === '--dataview') {
       config.dataviewMode = true;  // Enable individual MD file creation from CSV rows
+    } else if (arg === '--sqlseal') {
+      config.sqlsealMode = true;  // Use SQL Seal instead of Dataview for CSV queries
     } else if (arg === '--enrich') {
       config.enrich = true;
     } else if (!arg.startsWith('-')) {
@@ -110,6 +113,7 @@ ${chalk.yellow('Options:')}
       --no-callouts   Disable Notion callout conversion to Obsidian callouts
       --no-csv        Disable CSV database processing and index generation
       --dataview      Create individual MD files from CSV rows (default: keep CSV only)
+      --sqlseal       Use SQL Seal query syntax instead of Dataview (default: Dataview)
   -V, --version       Show version number
   -h, --help          Show this help message
 

@@ -70,7 +70,7 @@
         "priceCurrency": "USD"
       },
       "description": "Fast Notion to Obsidian migration. Clean, simple, minimal dependencies.",
-      "softwareVersion": "2.5.0",
+      "softwareVersion": "2.6.0",
       "author": {
         "@type": "Person",
         "name": "bitbonsai",
@@ -95,7 +95,7 @@
         <header class="hero">
             <div class="hero-content">
                 <div class="badge-group">
-                    <div class="badge badge-version">version 2.5.2</div>
+                    <div class="badge badge-version">version 2.6.0</div>
                     <div class="badge badge-free">FREE</div>
                 </div>
                 <img src="logo.svg" alt="notion2obsidian logo" class="hero-logo" width="80" height="80" loading="eager">
@@ -133,7 +133,7 @@
                         <span class="command">notion2obsidian Export-*.zip ~/synced/Notion</span>
                     </div>
                     <div class="terminal-line output">
-                        <span class="gem">💎</span> Notion 2 Obsidian v2.5.0
+                        <span class="gem">💎</span> Notion 2 Obsidian v2.6.0
                     </div>
                     <div class="terminal-line output blank"></div>
                     <div class="terminal-line output highlight-line">
@@ -333,14 +333,15 @@ published: false
                     <div class="process-icon">📊</div>
                     <div class="process-content">
                         <h3>Organizes databases</h3>
-                        <p>Creates clean CSV files with Dataview-compatible index pages showing all records</p>
+                        <p>Creates clean CSV files with Dataview or SQL Seal-compatible index pages showing all records</p>
                         <div class="example">
                             <pre>Default structure:
 Tasks.csv (clean file)
-Tasks_Index.md (Dataview query)
+Tasks_Index.md (Dataview or SQL Seal query)
 Tasks/_data/ (individual pages)
 
-📦 Requires: Dataview plugin</pre>
+📦 Requires: Dataview or SQL Seal plugin
+💡 Use --sqlseal flag for SQL syntax</pre>
                         </div>
                     </div>
                 </div>
@@ -444,14 +445,14 @@ Tasks/_data/ (individual pages)
                     <div class="install-instruction">
                         <div class="step-number">5</div>
                         <div>
-                            <h3>Open in Obsidian & Install Dataview</h3>
-                            <p>Create a new vault and install the Dataview plugin for database features.</p>
+                            <h3>Open in Obsidian & Install Query Plugin</h3>
+                            <p>Create a new vault and install Dataview (or SQL Seal for SQL syntax) for database features.</p>
                         </div>
                     </div>
                     <div class="install-command">
                         <aside class="info-box" role="note">
                             📂 Open as vault → Browse → Select the folder<br>
-                            📦 Settings → Community plugins → Browse → "Dataview" → Install
+                            📦 Settings → Community plugins → Browse → "Dataview" (or "SQL Seal") → Install
                         </aside>
                     </div>
                 </div>
@@ -509,7 +510,7 @@ My Document 2d6fa1e5/
                 </div>
                 <div class="faq-item">
                     <h3><span class="faq-icon">?</span> Do I need any Obsidian plugins?</h3>
-                    <p><strong>For database features:</strong> Install the <a href="https://github.com/blacksmithgu/obsidian-dataview" target="_blank" rel="noopener">Dataview plugin</a> to view and query your Notion databases. Without it, database index pages will only show raw query code instead of interactive tables.</p>
+                    <p><strong>For database features:</strong> Install the <a href="https://github.com/blacksmithgu/obsidian-dataview" target="_blank" rel="noopener">Dataview plugin</a> (default) or <a href="https://github.com/h-sphere/sql-seal" target="_blank" rel="noopener">SQL Seal plugin</a> (with <code>--sqlseal</code> flag) to view and query your Notion databases. Without one of these, database index pages will only show raw query code instead of interactive tables.</p>
                     <p style="margin-top: 0.75rem;"><strong>For cover images (with --enrich):</strong> Install the <a href="https://github.com/noatpad/obsidian-banners" target="_blank" rel="noopener">Obsidian Banners plugin</a> to display cover images enriched from Notion. Covers are downloaded to <code>_banners/</code> folder.</p>
                     <p style="margin-top: 0.75rem;"><strong>For icons (with --enrich):</strong> Install the <a href="https://github.com/FlorianWoelki/obsidian-iconize" target="_blank" rel="noopener">Iconize plugin</a> to display emoji and image icons enriched from Notion. Emoji icons work immediately; image icons are downloaded and configured automatically.</p>
                     <p style="margin-top: 0.75rem; color: var(--color-text-dim); font-size: 0.9rem;">Install in Obsidian: Settings → Community plugins → Browse → Search plugin name → Install & Enable</p>

@@ -116,6 +116,68 @@ export function generateDatabaseIndex(csvInfo, targetDir) {
 }
 
 /**
+ * Creates a markdown index page for a CSV database using SQL Seal syntax
+ * @param {Object} csvInfo - CSV file information
+ * @param {string} targetDir - Target directory
+ * @returns {string} - Generated markdown content
+ */
+export function generateSqlSealIndex(csvInfo, targetDir) {
+  const { databaseName, header, rows, fileName } = csvInfo;
+  const relativeCsvPath = `${databaseName}.csv`;
+
+  // Create SQL-safe table name (lowercase, underscores, no spaces)
+  const tableName = databaseName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+  let markdown = `# ${databaseName}\n\n`;
+  markdown += `Database with ${rows.length} records.\n\n`;
+
+  // Add CSV file link
+  markdown += `**CSV File:** [[${relativeCsvPath}|Open in spreadsheet app]]\n\n`;
+
+  // Create SQL Seal query to show all records
+  markdown += `## All Records\n\n`;
+  markdown += '```sqlseal\n';
+  markdown += `TABLE ${tableName} = file("${relativeCsvPath}")\n\n`;
+
+  // Use first 5 columns for the table view
+  const displayColumns = header.slice(0, 5);
+  markdown += `SELECT ${displayColumns.join(', ')}\n`;
+  markdown += `FROM ${tableName}\n`;
+  markdown += '```\n\n';
+
+  // Look for corresponding directory with individual MD files
+  const baseDir = dirname(csvInfo.path);
+  const dbDir = join(baseDir, databaseName);
+
+  try {
+    statSync(dbDir);
+
+    // Directory exists - reference the _data folder
+    markdown += `## Individual Pages\n\n`;
+    markdown += `Individual database pages are stored in [[${databaseName}/_data|${databaseName}/_data/]]\n\n`;
+  } catch (error) {
+    // No individual pages directory
+  }
+
+  // Add example queries section
+  markdown += `## Example Queries\n\n`;
+  markdown += '```sqlseal\n';
+  markdown += `-- Filter records\n`;
+  markdown += `SELECT * FROM ${tableName}\n`;
+  markdown += `WHERE ${displayColumns[0]} LIKE '%search%'\n\n`;
+
+  markdown += `-- Sort by column\n`;
+  markdown += `SELECT * FROM ${tableName}\n`;
+  markdown += `ORDER BY ${displayColumns[0]} ASC\n\n`;
+
+  markdown += `-- Count records\n`;
+  markdown += `SELECT COUNT(*) as total FROM ${tableName}\n`;
+  markdown += '```\n\n';
+
+  return markdown;
+}
+
+/**
  * Creates individual markdown notes from CSV rows (Dataview mode)
  * @param {Object} csvInfo - CSV file information
  * @param {string} targetDir - Target directory

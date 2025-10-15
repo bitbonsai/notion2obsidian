@@ -9,6 +9,26 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.6.0] - 2025-10-15 - SQL Seal Support
+
+### ✨ New Features
+- **SQL Seal Support**: Added `--sqlseal` flag to generate SQL Seal-compatible queries instead of Dataview
+  - Generates SQL syntax (`SELECT`, `FROM`, `WHERE`, `ORDER BY`) for database indexes
+  - Sanitizes database names to SQL-safe table names (lowercase, underscores)
+  - Includes example queries for filtering, sorting, and aggregation
+  - Alternative to Dataview for users who prefer SQL syntax
+  - Requires [SQL Seal plugin](https://github.com/h-sphere/sql-seal) in Obsidian
+
+### 🧪 Testing
+- Added 6 comprehensive tests for SQL Seal functionality (68 total tests, all passing)
+- Tests cover SQL index generation, table name sanitization, and query examples
+
+### 📝 Documentation
+- Updated README.md with `--sqlseal` flag documentation and examples
+- Added dedicated SQL Seal section explaining syntax and benefits
+- Updated index.html to mention SQL Seal as alternative query plugin
+- Clarified plugin requirements (Dataview or SQL Seal)
+
 ## [2.5.2] - 2025-10-06 - README & npm Package Improvements
 
 ### 📝 Documentation

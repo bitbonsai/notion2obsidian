@@ -679,6 +679,138 @@ describe("Database Index Generation", () => {
   });
 });
 
+describe("SQL Seal Index Generation", () => {
+  function generateSqlSealIndex(csvInfo) {
+    const { databaseName, header, rows } = csvInfo;
+    const relativeCsvPath = `${databaseName}.csv`;
+
+    // Create SQL-safe table name (lowercase, underscores, no spaces)
+    const tableName = databaseName.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+    let markdown = `# ${databaseName}\n\n`;
+    markdown += `Database with ${rows.length} records.\n\n`;
+    markdown += `**CSV File:** [[${relativeCsvPath}|Open in spreadsheet app]]\n\n`;
+    markdown += `## All Records\n\n`;
+    markdown += '```sqlseal\n';
+    markdown += `TABLE ${tableName} = file("${relativeCsvPath}")\n\n`;
+
+    const displayColumns = header.slice(0, 5);
+    markdown += `SELECT ${displayColumns.join(', ')}\n`;
+    markdown += `FROM ${tableName}\n`;
+    markdown += '```\n\n';
+
+    // Add example queries section
+    markdown += `## Example Queries\n\n`;
+    markdown += '```sqlseal\n';
+    markdown += `-- Filter records\n`;
+    markdown += `SELECT * FROM ${tableName}\n`;
+    markdown += `WHERE ${displayColumns[0]} LIKE '%search%'\n\n`;
+    markdown += `-- Sort by column\n`;
+    markdown += `SELECT * FROM ${tableName}\n`;
+    markdown += `ORDER BY ${displayColumns[0]} ASC\n\n`;
+    markdown += `-- Count records\n`;
+    markdown += `SELECT COUNT(*) as total FROM ${tableName}\n`;
+    markdown += '```\n\n';
+
+    return markdown;
+  }
+
+  test("should generate SQL Seal index with CSV link", () => {
+    const csvInfo = {
+      databaseName: "Tasks",
+      header: ["Task name", "Status", "Assignee", "Due", "Priority", "Summary"],
+      rows: [
+        ["Task 1", "Done", "John", "2024-01-01", "High", "Description"],
+        ["Task 2", "In Progress", "Jane", "2024-01-15", "Medium", "Description"]
+      ]
+    };
+
+    const index = generateSqlSealIndex(csvInfo);
+
+    expect(index).toContain("# Tasks");
+    expect(index).toContain("Database with 2 records");
+    expect(index).toContain("**CSV File:** [[Tasks.csv|Open in spreadsheet app]]");
+    expect(index).toContain("```sqlseal");
+    expect(index).toContain('TABLE tasks = file("Tasks.csv")');
+    expect(index).toContain('SELECT Task name, Status, Assignee, Due, Priority');
+    expect(index).toContain('FROM tasks');
+  });
+
+  test("should sanitize table names for SQL", () => {
+    const csvInfo = {
+      databaseName: "My Tasks & Projects",
+      header: ["Name", "Status"],
+      rows: [["Task 1", "Done"]]
+    };
+
+    const index = generateSqlSealIndex(csvInfo);
+
+    expect(index).toContain('TABLE my_tasks_projects = file("My Tasks & Projects.csv")');
+    expect(index).toContain('FROM my_tasks_projects');
+  });
+
+  test("should handle database names with special characters", () => {
+    const csvInfo = {
+      databaseName: "Tasks-2024 (Draft)",
+      header: ["Name"],
+      rows: []
+    };
+
+    const index = generateSqlSealIndex(csvInfo);
+
+    // Should convert to lowercase with underscores
+    expect(index).toContain('TABLE tasks_2024_draft = file("Tasks-2024 (Draft).csv")');
+    expect(index).toContain('FROM tasks_2024_draft');
+  });
+
+  test("should include example queries", () => {
+    const csvInfo = {
+      databaseName: "Projects",
+      header: ["Name", "Status", "Owner"],
+      rows: [["Project 1", "Active", "Alice"]]
+    };
+
+    const index = generateSqlSealIndex(csvInfo);
+
+    expect(index).toContain("## Example Queries");
+    expect(index).toContain("-- Filter records");
+    expect(index).toContain("WHERE Name LIKE '%search%'");
+    expect(index).toContain("-- Sort by column");
+    expect(index).toContain("ORDER BY Name ASC");
+    expect(index).toContain("-- Count records");
+    expect(index).toContain("SELECT COUNT(*) as total");
+  });
+
+  test("should handle long header lists", () => {
+    const csvInfo = {
+      databaseName: "Projects",
+      header: ["Name", "Status", "Owner", "Due Date", "Priority", "Tags", "Notes", "Progress"],
+      rows: [["Project 1", "Active", "Alice", "2024-12-31", "High", "work", "Notes", "50%"]]
+    };
+
+    const index = generateSqlSealIndex(csvInfo);
+
+    // Should only show first 5 columns
+    expect(index).toContain('SELECT Name, Status, Owner, Due Date, Priority');
+    expect(index).not.toContain('Tags');
+    expect(index).not.toContain('Progress');
+  });
+
+  test("should handle empty databases", () => {
+    const csvInfo = {
+      databaseName: "Empty Database",
+      header: ["Column1", "Column2"],
+      rows: []
+    };
+
+    const index = generateSqlSealIndex(csvInfo);
+
+    expect(index).toContain("Database with 0 records");
+    expect(index).toContain("```sqlseal");
+    expect(index).toContain('TABLE empty_database = file("Empty Database.csv")');
+  });
+});
+
 describe("File Naming Collision Resolution", () => {
   function resolveNamingCollision(baseName, ext, isDirectoryConflict) {
     if (isDirectoryConflict) {

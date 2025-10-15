@@ -1,6 +1,6 @@
 {
   "name": "notion2obsidian",
-  "version": "2.5.2",
+  "version": "2.6.0",
   "description": "High-performance CLI tool to migrate Notion exports to Obsidian-compatible markdown format",
   "type": "module",
   "main": "./notion2obsidian.js",
