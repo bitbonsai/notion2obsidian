@@ -208,21 +208,21 @@
 
         <!-- Features Grid -->
         <section class="features" aria-labelledby="features-heading">
-            <h2 id="features-heading" class="section-title">Why notion2obsidian?</h2>
+            <h2 id="why-notion2obsidian" class="section-title">Why notion2obsidian?</h2>
             <div class="features-grid">
                 <article class="feature-card">
                     <div class="feature-icon">⚡</div>
-                    <h3>Lightning Fast</h3>
+                    <h3 id="lightning-fast">Lightning Fast</h3>
                     <p>Migrate your entire workspace in seconds. Batch processing with concurrent operations handles thousands of files effortlessly.</p>
                 </article>
                 <article class="feature-card">
                     <div class="feature-icon">📦</div>
-                    <h3>Zero-Friction Setup</h3>
+                    <h3 id="zero-friction-setup">Zero-Friction Setup</h3>
                     <p>Extract and migrate zip files in one command. Preview changes with dry-run mode. No manual extraction, no backups cluttering your workspace.</p>
                 </article>
                 <article class="feature-card">
                     <div class="feature-icon">🔗</div>
-                    <h3>Perfect Migration</h3>
+                    <h3 id="perfect-migration">Perfect Migration</h3>
                     <p>Smart link conversion, auto-tagging, frontmatter generation, callout conversion, database processing with Dataview support, and duplicate handling. Everything works in Obsidian from day one.</p>
                 </article>
             </div>
@@ -230,21 +230,21 @@
 
         <!-- Who is this for? -->
         <section class="who-section">
-            <h2 class="section-title">Who is this for?</h2>
+            <h2 id="who-is-this-for" class="section-title">Who is this for?</h2>
             <div class="who-grid">
                 <div class="who-card">
                     <div class="who-emoji">🔄</div>
-                    <h3>Notion Refugees</h3>
+                    <h3 id="notion-refugees">Notion Refugees</h3>
                     <p>Making the switch to Obsidian for better performance, offline access, or local-first control? Migrate your entire workspace in seconds.</p>
                 </div>
                 <div class="who-card">
                     <div class="who-emoji">🧠</div>
-                    <h3>Second Brain Builders</h3>
+                    <h3 id="second-brain-builders">Second Brain Builders</h3>
                     <p>Years of notes in Notion but want Obsidian's graph view, backlinks, and plugin ecosystem? Keep your structure intact during migration.</p>
                 </div>
                 <div class="who-card">
                     <div class="who-emoji">⚙️</div>
-                    <h3>Automation Enthusiasts</h3>
+                    <h3 id="automation-enthusiasts">Automation Enthusiasts</h3>
                     <p>Need a scriptable, CLI-based migration that you can run on multiple exports or integrate into workflows? Built for the command line.</p>
                 </div>
             </div>
@@ -252,12 +252,12 @@
 
         <!-- What it does -->
         <section class="what-it-does">
-            <h2 class="section-title">What it does</h2>
+            <h2 id="what-it-does" class="section-title">What it does</h2>
             <div class="process-list">
                 <div class="process-item">
                     <div class="process-icon">🧹</div>
                     <div class="process-content">
-                        <h3>Cleans filenames</h3>
+                        <h3 id="cleans-filenames">Cleans filenames</h3>
                         <p>Removes 32-character Notion IDs from files and directories</p>
                         <div class="example">
                             <div class="example-before">My Document 2d6fa1e585714845.md</div>
@@ -269,7 +269,7 @@
                 <div class="process-item">
                     <div class="process-icon">📝</div>
                     <div class="process-content">
-                        <h3>Adds frontmatter</h3>
+                        <h3 id="adds-frontmatter">Adds frontmatter</h3>
                         <p>Generates YAML metadata including title, tags (auto-generated from folder structure), and Notion IDs</p>
                         <div class="example">
                             <pre>---
@@ -286,7 +286,7 @@ published: false
                 <div class="process-item">
                     <div class="process-icon">🔗</div>
                     <div class="process-content">
-                        <h3>Converts links</h3>
+                        <h3 id="converts-links">Converts links</h3>
                         <p>Transforms markdown links to Obsidian wiki links</p>
                         <div class="example">
                             <div class="example-before">[text](file.md)</div>
@@ -298,7 +298,7 @@ published: false
                 <div class="process-item">
                     <div class="process-icon">🎯</div>
                     <div class="process-content">
-                        <h3>Handles duplicates</h3>
+                        <h3 id="handles-duplicates">Handles duplicates</h3>
                         <p>Uses folder context to disambiguate files with identical names</p>
                         <div class="example">
                             <pre>folder: "Work/Projects"</pre>
@@ -308,7 +308,7 @@ published: false
                 <div class="process-item">
                     <div class="process-icon">📦</div>
                     <div class="process-content">
-                        <h3>Organizes attachments</h3>
+                        <h3 id="organizes-attachments">Organizes attachments</h3>
                         <p>Moves markdown files into their attachment folders and simplifies image paths</p>
                         <div class="example">
                             <div class="example-before">![Image](My%20Doc%202d6fa1e5/img.png)</div>
@@ -320,7 +320,7 @@ published: false
                 <div class="process-item">
                     <div class="process-icon">💬</div>
                     <div class="process-content">
-                        <h3>Converts callouts</h3>
+                        <h3 id="converts-callouts">Converts callouts</h3>
                         <p>Transforms Notion callouts with icons to Obsidian format</p>
                         <div class="example">
                             <div class="example-before">&lt;aside&gt;...&lt;/aside&gt;</div>
@@ -332,7 +332,7 @@ published: false
                 <div class="process-item">
                     <div class="process-icon">📊</div>
                     <div class="process-content">
-                        <h3>Organizes databases</h3>
+                        <h3 id="organizes-databases">Organizes databases</h3>
                         <p>Creates clean CSV files with Dataview or SQL Seal-compatible index pages showing all records</p>
                         <div class="example">
                             <pre>Default structure:
@@ -350,7 +350,7 @@ Tasks/_data/ (individual pages)
 
         <!-- Installation -->
         <section id="install" class="install">
-            <h2 class="section-title">Get Started <span class="time-estimate">~90 seconds</span></h2>
+            <h2 id="get-started" class="section-title">Get Started <span class="time-estimate">~90 seconds</span></h2>
 
             <div class="install-intro">
                 <p><strong>Why Bun?</strong> This tool is built with Bun, a modern JavaScript runtime that's significantly faster than Node.js. Bun handles thousands of files in seconds and provides native TypeScript support. Installing Bun takes just one command and won't interfere with your existing Node.js setup.</p>
@@ -362,7 +362,7 @@ Tasks/_data/ (individual pages)
                     <div class="install-instruction">
                         <div class="step-number">1</div>
                         <div>
-                            <h3>Install Bun runtime</h3>
+                            <h3 id="install-bun-runtime">Install Bun runtime</h3>
                             <p>Bun is a fast JavaScript runtime. If you already have it, skip to step 2.</p>
                         </div>
                     </div>
@@ -387,7 +387,7 @@ Tasks/_data/ (individual pages)
                     <div class="install-instruction">
                         <div class="step-number">2</div>
                         <div>
-                            <h3>Install notion2obsidian</h3>
+                            <h3 id="install-notion2obsidian">Install notion2obsidian</h3>
                             <p>Install the tool globally to use it anywhere.</p>
                         </div>
                     </div>
@@ -412,7 +412,7 @@ Tasks/_data/ (individual pages)
                     <div class="install-instruction">
                         <div class="step-number">3</div>
                         <div>
-                            <h3>Export from Notion</h3>
+                            <h3 id="export-from-notion">Export from Notion</h3>
                             <p>In Notion: Settings & Members → Export → Export all workspace content → Markdown & CSV</p>
                         </div>
                     </div>
@@ -428,7 +428,7 @@ Tasks/_data/ (individual pages)
                     <div class="install-instruction">
                         <div class="step-number">4</div>
                         <div>
-                            <h3>Run the migration</h3>
+                            <h3 id="run-the-migration">Run the migration</h3>
                             <p>Point to your downloaded zip file with optional output directory.</p>
                         </div>
                     </div>
@@ -445,7 +445,7 @@ Tasks/_data/ (individual pages)
                     <div class="install-instruction">
                         <div class="step-number">5</div>
                         <div>
-                            <h3>Open in Obsidian & Install Query Plugin</h3>
+                            <h3 id="open-in-obsidian-install-query-plugin">Open in Obsidian & Install Query Plugin</h3>
                             <p>Create a new vault and install Dataview (or SQL Seal for SQL syntax) for database features.</p>
                         </div>
                     </div>
@@ -461,14 +461,14 @@ Tasks/_data/ (individual pages)
 
         <!-- FAQ -->
         <section class="faq">
-            <h2 class="section-title">Common Questions</h2>
+            <h2 id="common-questions" class="section-title">Common Questions</h2>
             <div class="faq-list">
                 <div class="faq-item">
-                    <h3><span class="faq-icon">?</span> Will this modify my original Notion export?</h3>
+                    <h3 id="will-this-modify-my-original-notion-export"><span class="faq-icon">?</span> Will this modify my original Notion export?</h3>
                     <p>Your original .zip file is <strong>never modified</strong>. The tool extracts it to a temporary location, moves files to the output directory (specified with <code>-o</code> or created next to the zip), then cleans up the temp folder. The migration modifies only the output directory. Use <code>--dry-run</code> to preview changes before committing.</p>
                 </div>
                 <div class="faq-item">
-                    <h3><span class="faq-icon">?</span> What if I have duplicate filenames?</h3>
+                    <h3 id="what-if-i-have-duplicate-filenames"><span class="faq-icon">?</span> What if I have duplicate filenames?</h3>
                     <p>The tool handles duplicates in two ways:</p>
                     <div class="example" style="margin-top: 1rem;">
                         <div style="margin-bottom: 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>1. Files in different folders:</strong> Folder context added to frontmatter</div>
@@ -488,11 +488,11 @@ Untitled 985c88c5.md  →  Untitled-3.md</pre>
                     </div>
                 </div>
                 <div class="faq-item">
-                    <h3><span class="faq-icon">?</span> Do I need to extract the zip file first?</h3>
+                    <h3 id="do-i-need-to-extract-the-zip-file-first"><span class="faq-icon">?</span> Do I need to extract the zip file first?</h3>
                     <p>No! Just point notion2obsidian at the .zip file and it will extract and migrate in one step.</p>
                 </div>
                 <div class="faq-item">
-                    <h3><span class="faq-icon">?</span> What about images and attachments?</h3>
+                    <h3 id="what-about-images-and-attachments"><span class="faq-icon">?</span> What about images and attachments?</h3>
                     <p>All images, PDFs, and other attachments are preserved and organized. Files with attachments are moved into their attachment folders for better organization:</p>
                     <div class="example" style="margin-top: 1rem;">
                         <div style="margin-bottom: 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Before:</strong></div>
@@ -509,14 +509,14 @@ My Document 2d6fa1e5/
                     </div>
                 </div>
                 <div class="faq-item">
-                    <h3><span class="faq-icon">?</span> Do I need any Obsidian plugins?</h3>
+                    <h3 id="do-i-need-any-obsidian-plugins"><span class="faq-icon">?</span> Do I need any Obsidian plugins?</h3>
                     <p><strong>For database features:</strong> Install the <a href="https://github.com/blacksmithgu/obsidian-dataview" target="_blank" rel="noopener">Dataview plugin</a> (default) or <a href="https://github.com/h-sphere/sql-seal" target="_blank" rel="noopener">SQL Seal plugin</a> (with <code>--sqlseal</code> flag) to view and query your Notion databases. Without one of these, database index pages will only show raw query code instead of interactive tables.</p>
                     <p style="margin-top: 0.75rem;"><strong>For cover images (with --enrich):</strong> Install the <a href="https://github.com/noatpad/obsidian-banners" target="_blank" rel="noopener">Obsidian Banners plugin</a> to display cover images enriched from Notion. Covers are downloaded to <code>_banners/</code> folder.</p>
                     <p style="margin-top: 0.75rem;"><strong>For icons (with --enrich):</strong> Install the <a href="https://github.com/FlorianWoelki/obsidian-iconize" target="_blank" rel="noopener">Iconize plugin</a> to display emoji and image icons enriched from Notion. Emoji icons work immediately; image icons are downloaded and configured automatically.</p>
                     <p style="margin-top: 0.75rem; color: var(--color-text-dim); font-size: 0.9rem;">Install in Obsidian: Settings → Community plugins → Browse → Search plugin name → Install & Enable</p>
                 </div>
-                <div class="faq-item" id="enrich">
-                    <h3><span class="faq-icon">?</span> How do I enrich my vault with Notion API metadata?</h3>
+                <div class="faq-item">
+                    <h3 id="how-do-i-enrich-my-vault-with-notion-api-metadata"><span class="faq-icon">?</span> How do I enrich my vault with Notion API metadata?</h3>
                     <p>The <code>--enrich</code> flag adds creation dates, last edited times, public URLs, and downloads cover images from Notion. Here's how to set it up:</p>
                     <div class="example" style="margin-top: 1rem;">
                         <div style="margin-bottom: 0.75rem; color: var(--color-text-dim); font-size: 0.85rem;"><strong>Step 1: Get your Notion Integration Token</strong></div>
@@ -552,7 +552,7 @@ notion2obsidian . --enrich</pre>
                     </div>
                 </div>
                 <div class="faq-item">
-                    <h3><span class="faq-icon">?</span> Can I undo the migration?</h3>
+                    <h3 id="can-i-undo-the-migration"><span class="faq-icon">?</span> Can I undo the migration?</h3>
                     <p>Yes. Your original .zip file is never touched. Simply delete the output directory and run the migration again to start fresh. The tool automatically cleans up temporary files, so you only need to manage the output directory.</p>
                 </div>
             </div>
@@ -631,6 +631,44 @@ notion2obsidian . --enrich</pre>
                     setTimeout(() => {
                         button.style.opacity = '';
                     }, 500);
+                }
+            });
+        });
+
+        // Heading anchor links - copy URL to clipboard on click
+        document.querySelectorAll('h2[id], h3[id]').forEach(heading => {
+            heading.addEventListener('click', async () => {
+                const anchorUrl = `${window.location.origin}${window.location.pathname}#${heading.id}`;
+
+                try {
+                    // Modern clipboard API
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(anchorUrl);
+                    } else {
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = anchorUrl;
+                        textArea.style.position = 'fixed';
+                        textArea.style.left = '-999999px';
+                        textArea.style.top = '-999999px';
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        document.execCommand('copy');
+                        textArea.remove();
+                    }
+
+                    // Visual feedback - briefly change opacity
+                    const originalOpacity = heading.style.opacity;
+                    heading.style.opacity = '0.5';
+                    setTimeout(() => {
+                        heading.style.opacity = originalOpacity || '';
+                    }, 200);
+
+                    // Update URL hash without scrolling
+                    history.pushState(null, null, `#${heading.id}`);
+                } catch (err) {
+                    console.error('Failed to copy anchor URL:', err);
                 }
             });
         });
