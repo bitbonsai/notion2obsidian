@@ -215,8 +215,11 @@ export async function extractZipToSameDirectory(zipPath, options = {}) {
       console.log(chalk.red(`✗ Extraction failed: ${err.message}`));
     }
 
-    // Clean up on error
-    await rm(extractDir, { recursive: true, force: true });
+    // Only clean up if we created the extractDir ourselves.
+    // If mergeToDir was provided, the directory is owned by the caller — don't delete it.
+    if (!mergeToDir) {
+      await rm(extractDir, { recursive: true, force: true });
+    }
     throw err;
   }
 }
