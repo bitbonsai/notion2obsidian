@@ -93,16 +93,58 @@ export async function extractZipToSameDirectory(zipPath, options = {}) {
     const nestedZips = [];
 
     for (const [filePath, content] of selectedFiles) {
-      const fullPath = join(extractDir, filePath);
+      let fullPath = join(extractDir, filePath);
 
-      // Create directory structure
-      await mkdir(dirname(fullPath), { recursive: true });
+      try {
+        // Create directory structure.
+        // On case-insensitive filesystems (macOS), a FILE may already exist at a path
+        // we need as a directory (e.g. "untitled" file vs "Untitled/" directory).
+        // Rename the blocking file out of the way first.
+        try {
+          await mkdir(dirname(fullPath), { recursive: true });
+        } catch (err) {
+          if (err.code === 'EEXIST' && err.path) {
+            const moved = err.path + '-file';
+            await rename(err.path, moved);
+            if (!suppressMessages) {
+              console.log(chalk.yellow(`  Note: renamed ${basename(err.path)} → ${basename(moved)} (case conflict)`));
+            }
+            await mkdir(dirname(fullPath), { recursive: true });
+          } else {
+            throw err;
+          }
+        }
 
-      // Write file
-      await writeFile(fullPath, content);
+        // Write file.
+        // On case-insensitive filesystems (macOS), a DIRECTORY may already occupy the same
+        // case-insensitive path as this file. Rename the file to avoid the conflict.
+        try {
+          await writeFile(fullPath, content);
+        } catch (err) {
+          if (err.code === 'EISDIR') {
+            const dot = fullPath.lastIndexOf('.');
+            const hasExt = dot > fullPath.lastIndexOf('/');
+            fullPath = hasExt
+              ? fullPath.slice(0, dot) + '-file' + fullPath.slice(dot)
+              : fullPath + '-file';
+            await writeFile(fullPath, content);
+            if (!suppressMessages) {
+              console.log(chalk.yellow(`  Note: renamed ${filePath} → ${basename(fullPath)} (case conflict)`));
+            }
+          } else {
+            throw err;
+          }
+        }
+      } catch (err) {
+        // Unresolvable write error — skip with a warning rather than aborting the whole extraction
+        if (!suppressMessages) {
+          console.log(chalk.yellow(`  Warning: skipping ${filePath}: ${err.message}`));
+        }
+        continue;
+      }
 
       // Check if this is a nested zip file
-      if (filePath.toLowerCase().endsWith('.zip')) {
+      if (fullPath.toLowerCase().endsWith('.zip')) {
         nestedZips.push(fullPath);
       }
 
