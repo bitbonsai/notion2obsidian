@@ -1,5 +1,5 @@
 import { dirname, basename, join } from "node:path";
-import { mkdir, writeFile, rm, readdir, stat, rename } from "node:fs/promises";
+import { mkdir, writeFile, rm, readdir, stat, rename, copyFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { Glob } from "bun";
 import { unzipSync } from "fflate";
@@ -348,6 +348,21 @@ export async function extractMultipleZips(zipPaths, options = {}) {
         await rename(sourcePath, targetPath);
       }
 
+      // When contentPath is a subdirectory, also copy sibling files (CSVs, etc.)
+      // from mergeDir root that belong with the content
+      if (contentPath !== mergeDir) {
+        const rootEntries = await readdir(mergeDir);
+        for (const entry of rootEntries) {
+          if (entry === basename(contentPath)) continue; // Skip the content dir itself
+          const sourcePath = join(mergeDir, entry);
+          const entryStat = await stat(sourcePath).catch(() => null);
+          if (entryStat?.isFile()) {
+            const targetPath = join(outputDir, entry);
+            await copyFile(sourcePath, targetPath);
+          }
+        }
+      }
+
       console.log(chalk.green('✓ Content moved to output directory'));
 
       return {
@@ -359,7 +374,20 @@ export async function extractMultipleZips(zipPaths, options = {}) {
       };
     }
 
-    // No custom output - return the content path as-is
+    // No custom output - copy sibling files into contentPath so they're accessible
+    if (contentPath !== mergeDir) {
+      const rootEntries = await readdir(mergeDir);
+      for (const entry of rootEntries) {
+        if (entry === basename(contentPath)) continue; // Skip the content dir itself
+        const sourcePath = join(mergeDir, entry);
+        const entryStat = await stat(sourcePath).catch(() => null);
+        if (entryStat?.isFile()) {
+          const targetPath = join(contentPath, entry);
+          await copyFile(sourcePath, targetPath);
+        }
+      }
+    }
+
     return {
       path: contentPath,
       extractDir: mergeDir,

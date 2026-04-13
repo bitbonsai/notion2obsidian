@@ -6,7 +6,7 @@ import { extname } from "node:path";
 
 export const PATTERNS = {
   hexId: /^[0-9a-fA-F]{32}$/,
-  mdLink: /\[([^\]]+)\]\(([^)]+)\)/g,
+  mdLink: /\[([^\]]*)\]\(([^)]+)\)/g,
   frontmatter: /^\uFEFF?\s*---\s*\n/,  // Only accept --- delimiters (Obsidian requirement)
   notionIdExtract: /\s([0-9a-fA-F]{32})(?:\.[^.]+)?$/,
   // Visual patterns for Notion callouts
@@ -84,4 +84,46 @@ export function cleanDirName(dirname) {
     return sanitizeFilename(parts.join(' '));
   }
   return sanitizeFilename(dirname);
+}
+
+/**
+ * Sanitizes a property name into a valid kebab-case frontmatter key.
+ * Strips non-alphanumeric/CJK/hyphen characters and trims leading/trailing hyphens.
+ * @param {string} name - Raw property/column name (e.g. "🛒 Shop Listing")
+ * @returns {string} - Sanitized key (e.g. "shop-listing")
+ */
+export function sanitizeKey(name) {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\u4e00-\u9fa5-]/g, '')
+    .replace(/^-+|-+$/g, '');
+}
+
+// Skeleton-based title normalization for dedup.
+// Notion's zip export mangles filenames unpredictably (colons→spaces, dots→spaces,
+// mailto: prefixes, @mentions, truncation). Instead of reverse-engineering each rule,
+// we strip ALL non-alphanumeric/CJK characters to get a comparable "skeleton".
+export function normalizeTitle(title) {
+  return title
+    .replace(/\s*\(https---www\.notion\.so-[0-9a-f]+-pvs=\d+\)/gi, '')
+    .replace(/\s*\(https?:\/\/www\.notion\.so\/[^)]+\)/gi, '')
+    .replace(/\b(mailto|https?|ftp)[-:]/gi, '')
+    .replace(/@/g, '')
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .toLowerCase();
+}
+
+// Prefix-aware skeleton match to handle Notion filename truncation.
+// Requires ≥40 chars to prevent false positives on short titles.
+// (Notion's typical filename truncation happens around 40+ characters.)
+export function skeletonsMatch(skeletonA, skeletonB) {
+  if (skeletonA === skeletonB) return true;
+  const minLen = Math.min(skeletonA.length, skeletonB.length);
+  if (minLen >= 40) {
+    const shorter = skeletonA.length <= skeletonB.length ? skeletonA : skeletonB;
+    const longer = skeletonA.length > skeletonB.length ? skeletonA : skeletonB;
+    if (longer.startsWith(shorter)) return true;
+  }
+  return false;
 }

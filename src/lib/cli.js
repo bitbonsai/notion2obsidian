@@ -19,7 +19,9 @@ export function parseArgs() {
     processCsv: true,
     dataviewMode: false,  // Default to traditional mode (CSV only, no individual MD files)
     sqlsealMode: false,  // Use SQL Seal queries instead of Dataview
-    enrich: false  // Enrichment mode
+    basesMode: false,  // Use Obsidian Bases instead of Dataview/SQL Seal
+    enrich: false,  // Enrichment mode
+    inferMetadata: false
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -51,8 +53,13 @@ export function parseArgs() {
       config.dataviewMode = true;  // Enable individual MD file creation from CSV rows
     } else if (arg === '--sqlseal') {
       config.sqlsealMode = true;  // Use SQL Seal instead of Dataview for CSV queries
+    } else if (arg === '--bases') {
+      config.basesMode = true;  // Use Obsidian Bases instead of Dataview/SQL Seal
+      config.dataviewMode = true;  // Bases needs individual notes to query
     } else if (arg === '--enrich') {
       config.enrich = true;
+    } else if (arg === '--infer-metadata') {
+      config.inferMetadata = true;
     } else if (!arg.startsWith('-')) {
       // Positional arguments: first is input(s), last is output (if more than one positional arg)
       config.targetPaths.push(arg);
@@ -110,10 +117,13 @@ ${chalk.yellow('Options:')}
                       (extracts 10% sample or 10MB max for zip files)
   -v, --verbose       Show detailed processing information
       --enrich        Enrich vault with Notion API metadata (dates, URLs, assets)
+      --infer-metadata
+                      Also infer generic top-of-note Key: value metadata
       --no-callouts   Disable Notion callout conversion to Obsidian callouts
       --no-csv        Disable CSV database processing and index generation
       --dataview      Create individual MD files from CSV rows (default: keep CSV only)
       --sqlseal       Use SQL Seal query syntax instead of Dataview (default: Dataview)
+      --bases        Use Obsidian Bases format for CSV databases
   -V, --version       Show version number
   -h, --help          Show this help message
 
@@ -139,6 +149,9 @@ ${chalk.yellow('Examples:')}
   ${chalk.gray('# Enrich with Notion API metadata (requires NOTION_TOKEN)')}
   notion2obsidian ./my-vault --enrich
 
+  ${chalk.gray('# Opt in to broader inline Key: value metadata inference')}
+  notion2obsidian ./Export-abc123.zip ~/Vault --infer-metadata
+
   ${chalk.gray('# Full workflow: migrate + enrich')}
   notion2obsidian Export-abc123.zip -o ./vault && notion2obsidian ./vault --enrich
 
@@ -148,7 +161,9 @@ ${chalk.blueBright('Features:')}
   • Custom output directory with -o/--output option
   • Removes Notion IDs from filenames and directories
   • Adds YAML frontmatter with metadata
+  • Keeps generic Key: value prose in the body unless --infer-metadata is enabled
   • Converts markdown links to wiki links
+  • Preserves heading anchors on restored note links
   • Handles duplicate filenames with folder context
   • Organizes attachments in folders with simplified paths
 `);

@@ -9,6 +9,26 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [Unreleased] - Bases Mode Bugfixes
+
+### 🐛 Bug Fixes
+- **Prevent scope pollution**: `.base` files are no longer created when row directory cannot be matched; `_Index.md` fallback with Dataview query is generated instead
+- **Fix wikilink collision**: CSV wikilink rewriting now uses object ID markers for precise occurrence-level restoration instead of global database name matching, preventing cross-wiring between same-name databases in different directories
+- **Improve row matching**: Enhanced directory index includes heading and frontmatter data; matching now uses fuzzy skeleton comparison for truncated filenames
+- **Preserve anchored note links**: MD object-ID markers now retain section fragments so restored links keep heading anchors instead of falling back to the page root
+- **Avoid accidental prose promotion**: Generic opening `Key: value` lines are no longer removed from note bodies by default
+- **Skip ambiguous @mentions**: Duplicate cleaned page titles are excluded from auto-linking so `@Project` stays literal when multiple notes share that name
+
+### ✨ Improvements
+- **Same-directory collision handling**: Multiple databases with the same name in the same directory are automatically disambiguated (e.g., `Tasks [abc12345].base`)
+- **Subtree-scoped rewriting**: Wikilink restoration only applies within the CSV's directory subtree, preventing accidental cross-directory linking
+- **Optional metadata inference**: New `--infer-metadata` flag re-enables broader top-of-note `Key: value` metadata inference when wanted
+
+### 📝 Documentation
+- Added `--bases` flag to CLI help text
+- Added Bases mode section to README
+- Documented `--infer-metadata` in CLI help and README
+
 ## [2.6.0] - 2025-10-15 - SQL Seal Support
 
 ### ✨ New Features
