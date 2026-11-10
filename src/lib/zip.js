@@ -106,9 +106,7 @@ export async function extractZipToSameDirectory(zipPath, options = {}) {
           if (err.code === 'EEXIST' && err.path) {
             const moved = err.path + '-file';
             await rename(err.path, moved);
-            if (!suppressMessages) {
-              console.log(chalk.yellow(`  Note: renamed ${basename(err.path)} → ${basename(moved)} (case conflict)`));
-            }
+            console.log(chalk.yellow(`  Note: renamed ${basename(err.path)} → ${basename(moved)} (case conflict)`));
             await mkdir(dirname(fullPath), { recursive: true });
           } else {
             throw err;
@@ -128,18 +126,16 @@ export async function extractZipToSameDirectory(zipPath, options = {}) {
               ? fullPath.slice(0, dot) + '-file' + fullPath.slice(dot)
               : fullPath + '-file';
             await writeFile(fullPath, content);
-            if (!suppressMessages) {
-              console.log(chalk.yellow(`  Note: renamed ${filePath} → ${basename(fullPath)} (case conflict)`));
-            }
+            console.log(chalk.yellow(`  Note: renamed ${filePath} → ${basename(fullPath)} (case conflict)`));
           } else {
             throw err;
           }
         }
       } catch (err) {
-        // Unresolvable write error — skip with a warning rather than aborting the whole extraction
-        if (!suppressMessages) {
-          console.log(chalk.yellow(`  Warning: skipping ${filePath}: ${err.message}`));
-        }
+        // Skip only unresolved name conflicts. Other errors (disk full, permissions) must abort.
+        if (!['EEXIST', 'EISDIR', 'ENOTDIR'].includes(err.code)) throw err;
+        // Always warn, even in nested/multi-zip mode, so a skipped file is never silent.
+        console.log(chalk.yellow(`  Warning: skipping ${filePath}: ${err.message}`));
         continue;
       }
 
