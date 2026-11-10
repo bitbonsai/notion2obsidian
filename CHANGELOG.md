@@ -9,6 +9,13 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [2.6.1] - 2026-11-10 - Zip extraction fixes
+
+### 🐛 Bug Fixes
+- A corrupt zip inside an export no longer deletes files already extracted (#3, thanks @dourgulf)
+- A file and folder with the same name (ignoring case, e.g. on macOS) no longer stop extraction. The file is renamed with a `-file` suffix (#3)
+- Skipped or renamed files are now reported in multi-zip and nested-zip mode too
+
 ## [2.6.0] - 2025-10-15 - SQL Seal Support
 
 ### ✨ New Features
