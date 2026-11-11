@@ -124,6 +124,7 @@ notion2obsidian
     --no-csv        # Disable CSV database processing and index generation
     --dataview      # Create individual markdown notes from CSV rows (default: CSV only)
     --sqlseal       # Use SQL Seal query syntax instead of Dataview (default: Dataview)
+    --bases         # Create Obsidian Bases (.base) views for CSV databases
 -h, --help          # Show help message
 ```
 
@@ -153,6 +154,9 @@ notion2obsidian ./Export-abc123.zip ~/Vault --dataview
 
 # Use SQL Seal for database queries (alternative to Dataview)
 notion2obsidian ./Export-abc123.zip ~/Vault --sqlseal
+
+# Create Obsidian Bases views for CSV databases
+notion2obsidian ./Export-abc123.zip ~/Vault --bases
 
 # Disable specific features
 notion2obsidian ./Export-abc123.zip ~/Vault --no-callouts --no-csv
@@ -283,6 +287,22 @@ SELECT COUNT(*) as total FROM tasks
 - More familiar for users with SQL experience
 - More powerful query capabilities (JOINs, CTEs, aggregations)
 - Parameterized queries using note properties
+
+#### Alternative: Bases Mode (`--bases`)
+
+[Bases](https://help.obsidian.md/bases) is a core plugin built into Obsidian (Settings → Core plugins → Bases) that lets you create database views over your notes. Use the `--bases` flag to turn each Notion CSV database into a Bases-compatible `.base` file:
+
+```bash
+notion2obsidian ./Export-abc123.zip ~/Vault --bases
+```
+
+**What it creates:**
+- A `<DatabaseName>.base` file next to the CSV, with a table view of all records and an "Active" view that filters out done/archived rows (when a Status column exists)
+- A note for each CSV row in the database folder (rows without an existing page)
+- Missing properties added to existing row notes — existing frontmatter is never overwritten
+- Links to the database are rewritten to point to `Name.base` so they open the Bases view in Obsidian
+
+Without the flag, the default output is unchanged.
 
 ## 🔮 Notion API Enrichment
 
