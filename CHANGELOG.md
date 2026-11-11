@@ -9,6 +9,11 @@ published: false
 
 All notable changes to the Notion to Obsidian Migration Tool.
 
+## [Unreleased]
+
+### ✨ Features
+- New `--bases` flag: turn each Notion CSV database into an Obsidian Bases (`.base`) view, with row notes and properties synced from the CSV
+
 ## [2.6.1] - 2026-11-10 - Zip extraction fixes
 
 ### 🐛 Bug Fixes

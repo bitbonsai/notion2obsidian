@@ -51,6 +51,7 @@ import {
   generateDataviewIndex
 } from "./src/lib/csv.js";
 import { enrichVault } from "./src/lib/enrich.js";
+import { processBasesDatabases } from "./src/lib/bases.js";
 
 // ============================================================================
 // Runtime Check
@@ -926,7 +927,19 @@ async function main() {
   spinner.succeed(`Step 5/5: Normalized ${normalizedImages} images and ${updatedReferences} references`);
 
   // Step 6: Process CSV databases if enabled
-  if (config.processCsv) {
+  if (config.processCsv && config.basesMode) {
+    // Bases mode: create Obsidian Bases (.base) views for each CSV database
+    console.log(chalk.green('Step 6: Processing CSV databases with Obsidian Bases support...'));
+
+    const csvFiles = await processCsvDatabases(targetDir);
+    const result = await processBasesDatabases(csvFiles, targetDir, { verbose: config.verbose });
+
+    stats.csvFilesProcessed = csvFiles.length;
+    stats.csvIndexesCreated = result.baseFilesCreated;
+    stats.csvNotesCreated = result.notesCreated;
+
+    console.log(`  ${chalk.green('✓')} Processed ${csvFiles.length} CSV files, created ${result.baseFilesCreated} .base files and ${result.notesCreated} notes\n`);
+  } else if (config.processCsv) {
     console.log(chalk.green(config.dataviewMode ?
       'Step 6: Processing CSV databases with Dataview support...' :
       'Step 6: Processing CSV databases...'));

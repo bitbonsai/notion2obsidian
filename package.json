@@ -14,6 +14,7 @@
   "files": [
     "notion2obsidian.js",
     "src/lib/assets.js",
+    "src/lib/bases.js",
     "src/lib/callouts.js",
     "src/lib/cli.js",
     "src/lib/csv.js",
